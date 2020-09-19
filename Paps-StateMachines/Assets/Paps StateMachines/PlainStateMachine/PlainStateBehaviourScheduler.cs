@@ -1,15 +1,12 @@
 ﻿using Paps.Maybe;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
-    internal class StateBehaviourScheduler<TState>
+    internal class PlainStateBehaviourScheduler<TState>
     {
-        private readonly StateCollection<TState> _states;
-
-        private IState _currentStateObject;
-        private TState _currentState { get; set; }
-
         public Maybe<TState> CurrentState
         {
             get
@@ -22,8 +19,16 @@ namespace Paps.StateMachines
         }
         public bool IsStarted { get; private set; }
 
-        public StateBehaviourScheduler(StateCollection<TState> stateCollection)
+        private readonly PlainStateCollection<TState> _states;
+
+        private IState _currentStateObject;
+        private TState _currentState { get; set; }
+
+        private IEqualityComparer<TState> _stateComparer;
+
+        public PlainStateBehaviourScheduler(PlainStateCollection<TState> stateCollection, IEqualityComparer<TState> stateComparer)
         {
+            _stateComparer = stateComparer;
             _states = stateCollection;
         }
 
@@ -86,6 +91,8 @@ namespace Paps.StateMachines
             }
         }
 
+        public bool CanSwitch() => IsStarted;
+
         public void SwitchTo(TState stateId, Action onStateChanged)
         {
             var nextState = stateId;
@@ -99,6 +106,14 @@ namespace Paps.StateMachines
             onStateChanged();
 
             _currentStateObject.Enter();
+        }
+
+        public bool IsInState(TState stateId)
+        {
+            if (CurrentState.HasValue)
+                return _stateComparer.Equals(CurrentState.Value, stateId);
+
+            return false;
         }
     }
 }

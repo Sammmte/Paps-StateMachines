@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Paps.StateMachines
 {
-    public class StateCollection<TState>
+    internal class PlainStateCollection<TState>
     {
         private readonly Dictionary<TState, IState> _states = new Dictionary<TState, IState>();
         private readonly IEqualityComparer<TState> _stateComparer;
@@ -13,7 +13,7 @@ namespace Paps.StateMachines
         public Maybe<TState> InitialState { get; private set; }
         public int StateCount => _states.Count;
 
-        public StateCollection(IEqualityComparer<TState> stateComparer)
+        public PlainStateCollection(IEqualityComparer<TState> stateComparer)
         {
             _stateComparer = stateComparer;
         }
@@ -64,13 +64,17 @@ namespace Paps.StateMachines
             }
         }
 
-        public void RemoveState(TState stateId)
+        public bool RemoveState(TState stateId)
         {
             if(_states.Remove(stateId))
             {
                 if (AreEquals(InitialState.Value, stateId))
                     InitialState = Maybe<TState>.Nothing;
+
+                return true;
             }
+
+            return false;
         }
 
         public IState GetStateById(TState stateId)

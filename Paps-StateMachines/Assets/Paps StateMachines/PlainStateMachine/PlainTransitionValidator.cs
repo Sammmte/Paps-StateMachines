@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
-    internal class TransitionValidator<TState, TTrigger> : ITransitionValidator<TState, TTrigger>
+    internal class PlainTransitionValidator<TState, TTrigger>
     {
         private Dictionary<Transition<TState, TTrigger>, List<IGuardCondition>> _guardConditions;
 
-        public TransitionValidator(TransitionEqualityComparer<TState, TTrigger> transitionComparer)
+        public PlainTransitionValidator(IEqualityComparer<Transition<TState, TTrigger>> transitionComparer)
         {
             _guardConditions = new Dictionary<Transition<TState, TTrigger>, List<IGuardCondition>>(transitionComparer);
         }
@@ -50,10 +50,7 @@ namespace Paps.StateMachines
 
         public IGuardCondition[] GetGuardConditionsOf(Transition<TState, TTrigger> transition)
         {
-            if (_guardConditions.ContainsKey(transition))
-                return _guardConditions[transition].ToArray();
-            else
-                return null;
+            return _guardConditions[transition].ToArray();
         }
 
         public bool IsValid(Transition<TState, TTrigger> transition)
