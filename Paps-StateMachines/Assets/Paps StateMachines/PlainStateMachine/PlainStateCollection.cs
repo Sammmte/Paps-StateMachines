@@ -48,7 +48,7 @@ namespace Paps.StateMachines
         {
             if (ContainsState(stateId) == false)
             {
-                throw new StateIdNotAddedException(stateId.ToString());
+                throw new StateIdNotAddedException(stateId);
             }
         }
 
@@ -79,12 +79,9 @@ namespace Paps.StateMachines
 
         public IState GetStateById(TState stateId)
         {
-            if (_states.ContainsKey(stateId))
-            {
-                return _states[stateId];
-            }
+            ValidateHasStateWithId(stateId);
 
-            throw new StateIdNotAddedException(stateId.ToString());
+            return _states[stateId];
         }
 
         public TState[] GetStates()

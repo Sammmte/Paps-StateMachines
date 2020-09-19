@@ -4,7 +4,7 @@ using Paps.StateMachines;
 using Paps.StateMachines.Extensions;
 using System;
 
-namespace Tests
+namespace Tests.StateMachineExtensions
 {
     public abstract class EventDispatcherStateMachineExtensionsShould<TState, TTrigger>
     {

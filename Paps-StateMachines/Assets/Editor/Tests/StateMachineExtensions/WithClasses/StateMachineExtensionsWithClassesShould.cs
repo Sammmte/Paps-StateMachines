@@ -1,21 +1,21 @@
 ﻿using Paps.StateMachines;
 using System;
 
-namespace Tests.WithClasses
+namespace Tests.StateMachineExtensions.WithClasses
 {
-    public class EventDispatcherStateMachineExtensionsWithClassesShould : EventDispatcherStateMachineExtensionsShould<string, string>
+    public class StateMachineExtensionsWithClassesShould : StateMachineExtensionsShould<string, string>
     {
         protected override string NewStateId()
         {
             return Guid.NewGuid().ToString();
         }
 
-        protected override IEventDispatcherStateMachine<string, string> NewStateMachine()
+        protected override IStateMachine<string, string> NewStateMachine()
         {
             return NewStateMachine<string, string>();
         }
 
-        protected override IEventDispatcherStateMachine<T, U> NewStateMachine<T, U>()
+        protected override IStateMachine<T, U> NewStateMachine<T, U>()
         {
             return new PlainStateMachine<T, U>();
         }
@@ -41,3 +41,6 @@ namespace Tests.WithClasses
         }
     }
 }
+
+
+

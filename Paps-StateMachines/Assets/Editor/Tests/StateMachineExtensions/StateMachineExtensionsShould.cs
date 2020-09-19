@@ -7,7 +7,7 @@ using System.Linq;
 using NSubstitute;
 using System;
 
-namespace Tests
+namespace Tests.StateMachineExtensions
 {
     public abstract class StateMachineExtensionsShould<TState, TTrigger>
     {

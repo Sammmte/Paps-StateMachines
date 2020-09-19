@@ -1,7 +1,7 @@
 ﻿using NUnit.Framework;
 using Paps.StateMachines.Extensions;
 
-namespace Tests
+namespace Tests.StateMachineExtensions.ExtensionStates
 {
     public class DelegateStateShould
     {

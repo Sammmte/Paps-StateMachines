@@ -3,7 +3,7 @@ using Paps.StateMachines.Extensions;
 using System;
 using System.Threading;
 
-namespace Tests
+namespace Tests.StateMachineExtensions.ExtensionStates
 {
     public class TimerStateShould
     {

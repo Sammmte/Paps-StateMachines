@@ -1,8 +1,8 @@
 ﻿using Paps.StateMachines;
 
-namespace Tests.WithStructs
+namespace Tests.StateMachineExtensions.WithStructs
 {
-    public class StateMachineExtensionsWithStructsShould : StateMachineExtensionsShould<int, int>
+    public class EventDispatcherStateMachineExtensionsWithStructsShould : EventDispatcherStateMachineExtensionsShould<int, int>
     {
         private int _stateInt;
         private int _triggerInt;
@@ -12,12 +12,12 @@ namespace Tests.WithStructs
             return _stateInt++;
         }
 
-        protected override IStateMachine<int, int> NewStateMachine()
+        protected override IEventDispatcherStateMachine<int, int> NewStateMachine()
         {
             return NewStateMachine<int, int>();
         }
 
-        protected override IStateMachine<T, U> NewStateMachine<T, U>()
+        protected override IEventDispatcherStateMachine<T, U> NewStateMachine<T, U>()
         {
             return new PlainStateMachine<T, U>();
         }
@@ -43,6 +43,3 @@ namespace Tests.WithStructs
         }
     }
 }
-
-
-
