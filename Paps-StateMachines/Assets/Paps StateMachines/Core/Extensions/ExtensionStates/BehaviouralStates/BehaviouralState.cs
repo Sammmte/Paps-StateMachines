@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Paps.StateMachines.Extensions.BehaviouralStates
 {
-    public class BehaviouralState : IBehaviouralState
+    public class BehaviouralState : IState, IEnumerable<IStateBehaviour>
     {
         private int _currentBehaviourEnterIndex;
         private int _currentBehaviourUpdateIndex;
