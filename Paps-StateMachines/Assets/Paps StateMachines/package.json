@@ -1,0 +1,25 @@
+{
+  "name": "paps.state-machines",
+  "version": "1.0.0",
+  "displayName": "Paps StateMachines",
+  "unity": "2019.2",
+  "description": "state machines for unity with editor tools",
+  "license": "MIT License",
+  "dependencies": {
+    "paps.maybe": "1.0.0"
+  },
+  "keywords": [
+    "c#",
+    "fsm",
+	"hsm",
+    "paps",
+    "unity",
+    "state machine",
+	"plain state machine",
+	"hierarchical state machine"
+  ],
+  "author": {
+    "name": "Santiago Perez"
+  },
+  "homepage": "https://github.com/Sammmte/Paps-StateMachines"
+}
