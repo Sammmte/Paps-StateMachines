@@ -284,7 +284,7 @@ namespace Paps.StateMachines
             }
         }
 
-        public void Start()
+        public void Start(Action callback = null)
         {
             ValidateIsNotStarted();
             ValidateIsNotEmpty();
@@ -299,7 +299,7 @@ namespace Paps.StateMachines
             if (StateCount == 0) throw new EmptyStateMachineException();
         }
 
-        public void Stop()
+        public void Stop(Action callback = null)
         {
             if(IsStarted)
             {
@@ -309,7 +309,7 @@ namespace Paps.StateMachines
             IsStarted = false;
         }
 
-        public void Trigger(TTrigger trigger)
+        public void Trigger(TTrigger trigger, Action<bool> callback = null)
         {
             ValidateIsStarted();
 
@@ -321,7 +321,7 @@ namespace Paps.StateMachines
             }
         }
 
-        public void Update()
+        public void Update(Action callback = null)
         {
             ValidateIsStarted();
 
@@ -353,11 +353,11 @@ namespace Paps.StateMachines
             return _stateHierarchy.GetRoots();
         }
 
-        public bool SendEvent(IEvent messageEvent)
+        public void SendEvent(IEvent messageEvent, Action<bool> callback = null)
         {
             ValidateIsStarted();
 
-            return _hierarchicalEventDispatcher.SendEvent(messageEvent);
+            _hierarchicalEventDispatcher.SendEvent(messageEvent);
         }
 
         public void SubscribeEventHandlerTo(TState stateId, IStateEventHandler eventHandler)

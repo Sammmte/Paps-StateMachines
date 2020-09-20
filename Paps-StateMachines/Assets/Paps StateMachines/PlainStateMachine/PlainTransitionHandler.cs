@@ -55,17 +55,21 @@ namespace Paps.StateMachines
             return _transitions.ToArray();
         }
 
-        public void Trigger(TTrigger trigger)
+        public bool Trigger(TTrigger trigger)
         {
             if (!_stateBehaviourScheduler.CanSwitch())
-                return;
+                return false;
 
             if (TryGetStateTo(trigger, out TState stateTo))
             {
                 OnBeforeStateChanges?.Invoke(_stateBehaviourScheduler.CurrentState.Value, trigger, stateTo);
                 _stateBehaviourScheduler.SwitchTo(stateTo, 
                     () => OnStateChanged?.Invoke(_stateBehaviourScheduler.CurrentState.Value, trigger, stateTo));
+
+                return true;
             }
+
+            return false;
         }
 
         private bool TryGetStateTo(TTrigger trigger, out TState stateTo)

@@ -1,4 +1,5 @@
 ﻿using Paps.Maybe;
+using System;
 
 namespace Paps.StateMachines
 {
@@ -27,7 +28,7 @@ namespace Paps.StateMachines
 
         IState GetStateById(TState stateId);
 
-        void Trigger(TTrigger trigger);
+        void Trigger(TTrigger trigger, Action<bool> callback = null);
 
         bool IsInState(TState stateId);
     }

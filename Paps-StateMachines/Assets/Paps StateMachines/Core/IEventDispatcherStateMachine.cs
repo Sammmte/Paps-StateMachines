@@ -1,4 +1,6 @@
-﻿namespace Paps.StateMachines
+﻿using System;
+
+namespace Paps.StateMachines
 {
     public interface IEventDispatcherStateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>
     {
@@ -9,6 +11,6 @@
 
         IStateEventHandler[] GetEventHandlersOf(TState stateId);
 
-        bool SendEvent(IEvent ev);
+        void SendEvent(IEvent ev, Action<bool> callback = null);
     }
 }

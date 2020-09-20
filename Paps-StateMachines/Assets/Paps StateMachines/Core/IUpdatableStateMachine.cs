@@ -1,7 +1,9 @@
-﻿namespace Paps.StateMachines
+﻿using System;
+
+namespace Paps.StateMachines
 {
     public interface IUpdatableStateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>
     {
-        void Update();
+        void Update(Action callback = null);
     }
 }

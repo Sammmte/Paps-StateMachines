@@ -2,8 +2,8 @@
 
 namespace Paps.StateMachines
 {
-    public interface IPlainStateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>, IStartableStateMachine<TState, TTrigger>, IUpdatableStateMachine<TState, TTrigger>,
-        IEventDispatcherStateMachine<TState, TTrigger>, IGuardedStateMachine<TState, TTrigger>
+    public interface IPlainStateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>, IStartableStateMachine<TState, TTrigger>,
+        IUpdatableStateMachine<TState, TTrigger>, IEventDispatcherStateMachine<TState, TTrigger>, IGuardedStateMachine<TState, TTrigger>
     {
         Maybe<TState> CurrentState { get; }
 

@@ -49,6 +49,9 @@ namespace Paps.StateMachines
 
         private TransitionEqualityComparer<TState, TTrigger> _transitionComparer;
 
+        private Queue<Action> _actionQueue = new Queue<Action>();
+        private bool _processingActions;
+
         public PlainStateMachine(IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer)
         {
             if (stateComparer == null) throw new ArgumentNullException(nameof(stateComparer));
@@ -85,19 +88,50 @@ namespace Paps.StateMachines
             _triggerComparer.SetEqualityComparer(triggerComparer);
         }
 
-        public void Start()
+        private void ProcessActions()
         {
-            _stateBehaviourScheduler.Start();
+            if (_processingActions)
+                return;
+
+            _processingActions = true;
+
+            while (_actionQueue.Count > 0)
+                _actionQueue.Dequeue().Invoke();
+
+            _processingActions = false;
         }
 
-        public void Stop()
+        public void Start(Action callback = null)
         {
-            _stateBehaviourScheduler.Stop();
+            _actionQueue.Enqueue(() =>
+            {
+                _stateBehaviourScheduler.Start();
+                callback?.Invoke();
+            });
+
+            ProcessActions();
         }
 
-        public void Update()
+        public void Stop(Action callback = null)
         {
-            _stateBehaviourScheduler.Update();
+            _actionQueue.Enqueue(() =>
+            {
+                _stateBehaviourScheduler.Stop();
+                callback?.Invoke();
+            });
+
+            ProcessActions();
+        }
+
+        public void Update(Action callback = null)
+        {
+            _actionQueue.Enqueue(() =>
+            {
+                _stateBehaviourScheduler.Update();
+                callback?.Invoke();
+            });
+
+            ProcessActions();
         }
 
         public void SubscribeEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
@@ -120,9 +154,14 @@ namespace Paps.StateMachines
             return _eventDispatcher.GetEventHandlersOf(stateId);
         }
 
-        public bool SendEvent(IEvent ev)
+        public void SendEvent(IEvent ev, Action<bool> callback = null)
         {
-            return _eventDispatcher.SendEvent(ev);
+            _actionQueue.Enqueue(() =>
+            {
+                var handled = _eventDispatcher.SendEvent(ev);
+
+                callback?.Invoke(handled);
+            });
         }
 
         public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
@@ -195,9 +234,15 @@ namespace Paps.StateMachines
             return _states.GetStateById(stateId);
         }
 
-        public void Trigger(TTrigger trigger)
+        public void Trigger(TTrigger trigger, Action<bool> callback = null)
         {
-            _transitionHandler.Trigger(trigger);
+            _actionQueue.Enqueue(() =>
+            {
+                var hasChanged = _transitionHandler.Trigger(trigger);
+                callback?.Invoke(hasChanged);
+            });
+
+            ProcessActions();
         }
 
         public bool IsInState(TState stateId)

@@ -68,7 +68,7 @@ namespace Paps.StateMachines
         {
             if(_states.Remove(stateId))
             {
-                if (AreEquals(InitialState.Value, stateId))
+                if (InitialState.HasValue && AreEquals(InitialState.Value, stateId))
                     InitialState = Maybe<TState>.Nothing;
 
                 return true;
