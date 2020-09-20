@@ -34,8 +34,8 @@ namespace Tests.StateMachineExtensions
 
             fsm.SubscribeEventHandlersTo(stateId1, eventHandler1, eventHandler2);
 
-            Assert.IsTrue(fsm.HasEventHandlerOn(stateId1, eventHandler1));
-            Assert.IsTrue(fsm.HasEventHandlerOn(stateId1, eventHandler2));
+            Assert.IsTrue(fsm.ContainsEventHandlerOn(stateId1, eventHandler1));
+            Assert.IsTrue(fsm.ContainsEventHandlerOn(stateId1, eventHandler2));
         }
 
         [Test]

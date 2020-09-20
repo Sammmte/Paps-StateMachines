@@ -76,6 +76,18 @@ namespace Paps.StateMachines
             
         }
 
+        public PlainStateMachine(TState initialStateId, IState stateObject, IEqualityComparer<TState> stateComparer, 
+            IEqualityComparer<TTrigger> triggerComparer) : this(stateComparer, triggerComparer)
+        {
+            AddState(initialStateId, stateObject);
+        }
+
+        public PlainStateMachine(TState initialStateId, IState stateObject) : this(initialStateId, stateObject,
+            EqualityComparer<TState>.Default, EqualityComparer<TTrigger>.Default)
+        {
+
+        }
+
         public void SetStateComparer(IEqualityComparer<TState> stateComparer)
         {
             if (stateComparer == null) throw new ArgumentNullException(nameof(stateComparer));
@@ -136,23 +148,27 @@ namespace Paps.StateMachines
             ProcessActions();
         }
 
-        public void SubscribeEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
+        public void AddEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
         {
+            ValidateContainsState(stateId);
+
             _eventDispatcher.AddEventHandlerTo(stateId, eventHandler);
         }
 
-        public bool UnsubscribeEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
+        public bool RemoveEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
         {
             return _eventDispatcher.RemoveEventHandlerFrom(stateId, eventHandler);
         }
 
-        public bool HasEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
+        public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
         {
             return _eventDispatcher.HasEventHandlerOn(stateId, eventHandler);
         }
 
         public IStateEventHandler[] GetEventHandlersOf(TState stateId)
         {
+            ValidateContainsState(stateId);
+
             return _eventDispatcher.GetEventHandlersOf(stateId);
         }
 
@@ -168,6 +184,8 @@ namespace Paps.StateMachines
 
         public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
         {
+            ValidateContainsTransition(transition);
+
             _transitionValidator.AddGuardConditionTo(transition, guardCondition);
         }
 
@@ -183,6 +201,8 @@ namespace Paps.StateMachines
 
         public IGuardCondition[] GetGuardConditionsOf(Transition<TState, TTrigger> transition)
         {
+            ValidateContainsTransition(transition);
+
             return _transitionValidator.GetGuardConditionsOf(transition);
         }
 
@@ -200,12 +220,19 @@ namespace Paps.StateMachines
         {
             if (_states.RemoveState(stateId))
             {
-                _transitionHandler.RemoveTransitionsRelatedTo(stateId);
+                RemoveObjectsRelatedTo(stateId);
 
                 return true;
             }
 
             return false;
+        }
+
+        private void RemoveObjectsRelatedTo(TState stateId)
+        {
+            var removedTransitions = _transitionHandler.RemoveTransitionsRelatedTo(stateId);
+            _transitionValidator.RemoveAllGuardConditionsFrom(removedTransitions);
+            _eventDispatcher.RemoveEventHandlersFrom(stateId);
         }
 
         public bool ContainsState(TState stateId)
@@ -228,7 +255,14 @@ namespace Paps.StateMachines
 
         public bool RemoveTransition(Transition<TState, TTrigger> transition)
         {
-            return _transitionHandler.RemoveTransition(transition);
+            if(_transitionHandler.RemoveTransition(transition))
+            {
+                _transitionValidator.RemoveAllGuardConditionsFrom(transition);
+
+                return true;
+            }
+
+            return false;
         }
 
         public bool ContainsTransition(Transition<TState, TTrigger> transition)
@@ -268,6 +302,12 @@ namespace Paps.StateMachines
         {
             if (!ContainsState(stateId))
                 throw new StateIdNotAddedException(stateId);
+        }
+
+        private void ValidateContainsTransition(Transition<TState, TTrigger> transition)
+        {
+            if (!ContainsTransition(transition))
+                throw new TransitionNotAddedException(transition.StateFrom, transition.Trigger, transition.StateTo);
         }
 
         #endregion

@@ -95,10 +95,30 @@ namespace Paps.StateMachines
             return modifiedFlag;
         }
 
-        public void RemoveTransitionsRelatedTo(TState stateId)
+        public List<Transition<TState, TTrigger>> RemoveTransitionsRelatedTo(TState stateId)
         {
-            _transitions.RemoveWhere(
-                t => _stateComparer.Equals(t.StateFrom, stateId) || _stateComparer.Equals(t.StateTo, stateId));
+            var toRemoveTransitions = GetTransitionsRelatedTo(stateId);
+
+            foreach (var transition in toRemoveTransitions)
+                _transitions.Remove(transition);
+
+            return toRemoveTransitions;
+        }
+
+        private List<Transition<TState, TTrigger>> GetTransitionsRelatedTo(TState stateId)
+        {
+            var list = new List<Transition<TState, TTrigger>>();
+
+            foreach(var transition in _transitions)
+            {
+                if(_stateComparer.Equals(transition.StateFrom, stateId) ||
+                    _stateComparer.Equals(transition.StateTo, stateId))
+                {
+                    list.Add(transition);
+                }
+            }
+
+            return list;
         }
     }
 }

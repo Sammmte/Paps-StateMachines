@@ -4,10 +4,10 @@ namespace Paps.StateMachines
 {
     public interface IEventDispatcherStateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>
     {
-        void SubscribeEventHandlerTo(TState stateId, IStateEventHandler eventHandler);
-        bool UnsubscribeEventHandlerFrom(TState stateId, IStateEventHandler eventHandler);
+        void AddEventHandlerTo(TState stateId, IStateEventHandler eventHandler);
+        bool RemoveEventHandlerFrom(TState stateId, IStateEventHandler eventHandler);
 
-        bool HasEventHandlerOn(TState stateId, IStateEventHandler eventHandler);
+        bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler);
 
         IStateEventHandler[] GetEventHandlersOf(TState stateId);
 

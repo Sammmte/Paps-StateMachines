@@ -23,6 +23,9 @@ namespace Paps.StateMachines
             ValidateCanAddState(stateId, state);
 
             _states.Add(stateId, state);
+
+            if (_states.Count == 1)
+                SetInitialState(stateId);
         }
 
         private void ValidateCanAddState(TState stateId, IState state)

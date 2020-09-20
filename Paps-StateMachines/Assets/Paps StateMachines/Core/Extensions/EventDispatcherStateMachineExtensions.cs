@@ -6,24 +6,24 @@ namespace Paps.StateMachines.Extensions
     {
         public static void SubscribeEventHandlerTo<TState, TTrigger>(this IEventDispatcherStateMachine<TState, TTrigger> fsm, TState stateId, Func<IEvent, bool> method)
         {
-            fsm.SubscribeEventHandlerTo(stateId, new DelegateStateEventHandler(method));
+            fsm.AddEventHandlerTo(stateId, new DelegateStateEventHandler(method));
         }
 
         public static void UnsubscribeEventHandlerFrom<TState, TTrigger>(this IEventDispatcherStateMachine<TState, TTrigger> fsm, TState stateId, Func<IEvent, bool> method)
         {
-            fsm.UnsubscribeEventHandlerFrom(stateId, new DelegateStateEventHandler(method));
+            fsm.RemoveEventHandlerFrom(stateId, new DelegateStateEventHandler(method));
         }
 
         public static bool HasEventHandler<TState, TTrigger>(this IEventDispatcherStateMachine<TState, TTrigger> fsm, TState stateId, Func<IEvent, bool> method)
         {
-            return fsm.HasEventHandlerOn(stateId, new DelegateStateEventHandler(method));
+            return fsm.ContainsEventHandlerOn(stateId, new DelegateStateEventHandler(method));
         }
 
         public static void SubscribeEventHandlersTo<TState, TTrigger>(this IEventDispatcherStateMachine<TState, TTrigger> fsm, TState stateId, params IStateEventHandler[] eventHandlers)
         {
             foreach (var eventHandler in eventHandlers)
             {
-                fsm.SubscribeEventHandlerTo(stateId, eventHandler);
+                fsm.AddEventHandlerTo(stateId, eventHandler);
             }
         }
 
@@ -31,7 +31,7 @@ namespace Paps.StateMachines.Extensions
         {
             foreach(var method in methods)
             {
-                fsm.SubscribeEventHandlerTo(stateId, new DelegateStateEventHandler(method));
+                fsm.AddEventHandlerTo(stateId, new DelegateStateEventHandler(method));
             }
         }
     }

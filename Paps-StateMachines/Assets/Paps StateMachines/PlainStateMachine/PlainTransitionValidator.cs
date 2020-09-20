@@ -40,6 +40,12 @@ namespace Paps.StateMachines
             _guardConditions.Remove(transition);
         }
 
+        public void RemoveAllGuardConditionsFrom(List<Transition<TState, TTrigger>> transitions)
+        {
+            foreach (var transition in transitions)
+                _guardConditions.Remove(transition);
+        }
+
         public bool ContainsGuardConditionOn(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
         {
             if (_guardConditions.ContainsKey(transition))

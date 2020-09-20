@@ -360,17 +360,17 @@ namespace Paps.StateMachines
             _hierarchicalEventDispatcher.SendEvent(messageEvent);
         }
 
-        public void SubscribeEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
+        public void AddEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
         {
             _hierarchicalEventDispatcher.AddEventHandlerTo(stateId, eventHandler);
         }
 
-        public bool UnsubscribeEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
+        public bool RemoveEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
         {
             return _hierarchicalEventDispatcher.RemoveEventHandlerFrom(stateId, eventHandler);
         }
 
-        public bool HasEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
+        public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
         {
             return _hierarchicalEventDispatcher.HasEventHandlerOn(stateId, eventHandler);
         }
