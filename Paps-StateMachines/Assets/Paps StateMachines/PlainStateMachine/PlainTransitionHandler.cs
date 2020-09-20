@@ -10,7 +10,7 @@ namespace Paps.StateMachines
         private IEqualityComparer<TState> _stateComparer;
         private IEqualityComparer<TTrigger> _triggerComparer;
 
-        private PlainTransitionValidator<TState, TTrigger> _transitionValidator;
+        private IPlainTransitionValidator<TState, TTrigger> _transitionValidator;
 
         private HashSet<Transition<TState, TTrigger>> _transitions = new HashSet<Transition<TState, TTrigger>>();
 
@@ -21,11 +21,11 @@ namespace Paps.StateMachines
 
         public PlainTransitionHandler(IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer,
             IEqualityComparer<Transition<TState, TTrigger>> transitionComparer,
-            PlainStateBehaviourScheduler<TState> stateBehaviourScheduler)
+            PlainStateBehaviourScheduler<TState> stateBehaviourScheduler, IPlainTransitionValidator<TState, TTrigger> transitionValidator)
         {
             _stateComparer = stateComparer;
             _triggerComparer = triggerComparer;
-            _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(transitionComparer);
+            _transitionValidator = transitionValidator;
             _stateBehaviourScheduler = stateBehaviourScheduler;
         }
 
@@ -36,13 +36,7 @@ namespace Paps.StateMachines
 
         public bool RemoveTransition(Transition<TState, TTrigger> transition)
         {
-            if(_transitions.Remove(transition))
-            {
-                _transitionValidator.RemoveAllGuardConditionsFrom(transition);
-                return true;
-            }
-
-            return false;
+            return _transitions.Remove(transition);
         }
 
         public bool ContainsTransition(Transition<TState, TTrigger> transition)
@@ -101,36 +95,10 @@ namespace Paps.StateMachines
             return modifiedFlag;
         }
 
-        public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
+        public void RemoveTransitionsRelatedTo(TState stateId)
         {
-            ValidateContainsTransition(transition);
-
-            _transitionValidator.AddGuardConditionTo(transition, guardCondition);
-        }
-
-        private void ValidateContainsTransition(Transition<TState, TTrigger> transition)
-        {
-            if (!ContainsTransition(transition))
-                throw new TransitionNotAddedException(transition.StateFrom, transition.Trigger, transition.StateTo);
-        }
-
-        public bool RemoveGuardConditionFrom(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
-        {
-            ValidateContainsTransition(transition);
-
-            return _transitionValidator.RemoveGuardConditionFrom(transition, guardCondition);
-        }
-
-        public bool ContainsGuardConditionOn(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
-        {
-            return _transitionValidator.ContainsGuardConditionOn(transition, guardCondition);
-        }
-
-        public IGuardCondition[] GetGuardConditionsOf(Transition<TState, TTrigger> transition)
-        {
-            ValidateContainsTransition(transition);
-
-            return _transitionValidator.GetGuardConditionsOf(transition);
+            _transitions.RemoveWhere(
+                t => _stateComparer.Equals(t.StateFrom, stateId) || _stateComparer.Equals(t.StateTo, stateId));
         }
     }
 }

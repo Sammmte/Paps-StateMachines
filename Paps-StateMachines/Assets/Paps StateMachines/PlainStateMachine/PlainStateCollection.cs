@@ -27,7 +27,11 @@ namespace Paps.StateMachines
 
         private void ValidateCanAddState(TState stateId, IState state)
         {
-            if (state == null)
+            if(stateId == null)
+            {
+                throw new ArgumentNullException(nameof(stateId));
+            }
+            else if (state == null)
             {
                 throw new ArgumentNullException(nameof(state));
             }

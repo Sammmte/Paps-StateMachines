@@ -1,4 +1,5 @@
-﻿using Paps.StateMachines;
+﻿using NUnit.Framework;
+using Paps.StateMachines;
 using System;
 
 namespace Tests.PlainStateMachine.WithClasses
@@ -38,6 +39,12 @@ namespace Tests.PlainStateMachine.WithClasses
         protected override string NewTrigger()
         {
             return Guid.NewGuid().ToString();
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Adds_A_Null_State_Id()
+        {
+            Assert.Throws<ArgumentNullException>(() => _stateMachine.AddState(null, _stateObject1));
         }
     }
 }

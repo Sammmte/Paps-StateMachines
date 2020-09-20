@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
-    internal class PlainTransitionValidator<TState, TTrigger>
+    internal class PlainTransitionValidator<TState, TTrigger> : IPlainTransitionValidator<TState, TTrigger>
     {
         private Dictionary<Transition<TState, TTrigger>, List<IGuardCondition>> _guardConditions;
 
