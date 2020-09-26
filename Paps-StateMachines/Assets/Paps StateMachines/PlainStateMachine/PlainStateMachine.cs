@@ -179,6 +179,8 @@ namespace Paps.StateMachines
 
                 callback?.Invoke(handled);
             });
+
+            ProcessActions();
         }
 
         public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)

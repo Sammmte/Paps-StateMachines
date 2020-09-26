@@ -71,6 +71,9 @@ namespace Paps.StateMachines
 
         public bool SendEvent(IEvent ev)
         {
+            if (_stateBehaviourScheduler.IsRunning == false)
+                return false;
+
             var eventHandlers = _eventHandlers[_stateBehaviourScheduler.CurrentState.Value];
 
             for(int i = 0; i < eventHandlers.Count; i++)

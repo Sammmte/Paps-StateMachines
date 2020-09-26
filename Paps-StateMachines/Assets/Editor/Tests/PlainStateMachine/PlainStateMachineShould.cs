@@ -44,9 +44,15 @@ namespace Tests.PlainStateMachine
         protected IState _stateObject1, _stateObject2, _stateObject3, _stateObject4, _stateObject5;
         protected IGuardCondition _guardCondition1, _guardCondition2, _guardCondition3, _guardCondition4, _guardCondition5;
         protected IStateEventHandler _stateEventHandler1, _stateEventHandler2, _stateEventHandler3, _stateEventHandler4, _stateEventHandler5;
+        protected IEvent _event1;
         protected StateChanged<TState, TTrigger> _onBeforeStateChangesSubscriptor1, _onBeforeStateChangesSubscriptor2, 
             _onBeforeStateChangesSubscriptor3;
         protected StateChanged<TState, TTrigger> _onStateChangedSubscriptor1, _onStateChangedSubscriptor2, _onStateChangedSubscriptor3;
+        protected Action _startCallback;
+        protected Action _stopCallback;
+        protected Action _updateCallback;
+        protected Action<bool> _triggerCallback;
+        protected Action<bool> _sendEventCallback;
 
         [SetUp]
         public void SetUp()
@@ -83,6 +89,8 @@ namespace Tests.PlainStateMachine
             _stateEventHandler4 = Substitute.For<IStateEventHandler>();
             _stateEventHandler5 = Substitute.For<IStateEventHandler>();
 
+            _event1 = Substitute.For<IEvent>();
+
             _onBeforeStateChangesSubscriptor1 = Substitute.For<StateChanged<TState, TTrigger>>();
             _onBeforeStateChangesSubscriptor2 = Substitute.For<StateChanged<TState, TTrigger>>();
             _onBeforeStateChangesSubscriptor3 = Substitute.For<StateChanged<TState, TTrigger>>();
@@ -90,6 +98,12 @@ namespace Tests.PlainStateMachine
             _onStateChangedSubscriptor1 = Substitute.For<StateChanged<TState, TTrigger>>();
             _onStateChangedSubscriptor2 = Substitute.For<StateChanged<TState, TTrigger>>();
             _onStateChangedSubscriptor3 = Substitute.For<StateChanged<TState, TTrigger>>();
+
+            _startCallback = Substitute.For<Action>();
+            _stopCallback = Substitute.For<Action>();
+            _updateCallback = Substitute.For<Action>();
+            _triggerCallback = Substitute.For<Action<bool>>();
+            _sendEventCallback = Substitute.For<Action<bool>>();
         }
 
         [Test]
@@ -516,6 +530,16 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
+        public void Do_Nothing_When_Update_Is_Called_While_Not_Running()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.DoesNotThrow(() => _stateMachine.Update());
+
+            _stateObject1.DidNotReceive().Update();
+        }
+
+        [Test]
         public void Execute_Exit_Of_Current_State_When_Stopped()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
@@ -524,6 +548,16 @@ namespace Tests.PlainStateMachine
             _stateMachine.Stop();
 
             _stateObject1.Received(1).Exit();
+        }
+
+        [Test]
+        public void Do_Nothing_When_Stop_Is_Called_While_Not_Running()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.DoesNotThrow(() => _stateMachine.Stop());
+
+            _stateObject1.DidNotReceive().Exit();
         }
 
         [Test]
@@ -609,6 +643,230 @@ namespace Tests.PlainStateMachine
                 _onStateChangedSubscriptor1.Invoke(_stateId1, _trigger1, _stateId2);
                 _stateObject2.Enter();
             });
+        }
+
+        [Test]
+        public void Do_Nothing_When_Trigger_Is_Called_While_Not_Running()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition);
+
+            Assert.DoesNotThrow(() => _stateMachine.Trigger(_trigger1));
+            _stateObject1.DidNotReceive().Enter();
+            _stateObject1.DidNotReceive().Exit();
+        }
+
+        [Test]
+        public void Do_Not_Change_State_When_A_Transition_Is_Triggered_But_A_Guard_Condition_Is_Invalid()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition2);
+
+            _guardCondition1.IsValid().Returns(true);
+            _guardCondition2.IsValid().Returns(false);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Assert.That(_stateMachine.CurrentState.Value.Equals(_stateId1), "State has not changed");
+        }
+
+        [Test]
+        public void Change_State_When_A_Transition_Is_Triggered_And_All_Guard_Conditions_Are_Valid()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition2);
+
+            _guardCondition1.IsValid().Returns(true);
+            _guardCondition2.IsValid().Returns(true);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Assert.That(_stateMachine.CurrentState.Value.Equals(_stateId2), "State has changed");
+        }
+
+        [Test]
+        public void Not_Throw_When_Multiple_Transitions_Are_Triggered_But_Only_One_Is_Valid()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition1 = NewTransition(_stateId1, _trigger1, _stateId1);
+            var transition2 = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition1);
+            _stateMachine.AddTransition(transition2);
+
+            _guardCondition1.IsValid().Returns(false);
+
+            _stateMachine.AddGuardConditionTo(transition1, _guardCondition1);
+
+            _stateMachine.Start();
+
+            Assert.DoesNotThrow(() => _stateMachine.Trigger(_trigger1));
+            Assert.That(_stateMachine.CurrentState.Value.Equals(_stateId2), "Valid transition has been made");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_Multiple_Triggered_Transitions_Have_Valid_Target_States()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition1 = NewTransition(_stateId1, _trigger1, _stateId1);
+            var transition2 = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition1);
+            _stateMachine.AddTransition(transition2);
+
+            _stateMachine.Start();
+
+            Assert.Throws<MultipleValidTransitionsFromSameStateException>(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Send_Event_To_Current_State_Until_Any_Event_Handler_Handles_It()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler2);
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler3);
+
+            _stateEventHandler1.HandleEvent(_event1).Returns(false);
+            _stateEventHandler2.HandleEvent(_event1).Returns(true);
+            _stateEventHandler3.HandleEvent(_event1).Returns(true);
+
+            _stateMachine.Start();
+
+            _stateMachine.SendEvent(_event1);
+
+            _stateEventHandler1.Received(1).HandleEvent(_event1);
+            _stateEventHandler2.Received(1).HandleEvent(_event1);
+            _stateEventHandler3.DidNotReceive().HandleEvent(Arg.Any<IEvent>());
+        }
+
+        [Test]
+        public void Do_Nothing_When_Send_Event_Is_Called_While_Not_Running()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.SendEvent(_event1);
+
+            _stateEventHandler1.DidNotReceive().HandleEvent(Arg.Any<IEvent>());
+        }
+
+        [Test]
+        public void Call_Start_Callback_When_It_Finishes()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.Start(_startCallback);
+
+            _startCallback.Received(1).Invoke();
+        }
+
+        [Test]
+        public void Call_Stop_Callback_When_It_Finishes()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.Start();
+
+            _stateMachine.Stop(_stopCallback);
+
+            _stopCallback.Received(1).Invoke();
+        }
+
+        [Test]
+        public void Call_Update_Callback_When_It_Finishes()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.Start();
+
+            _stateMachine.Update(_updateCallback);
+
+            _updateCallback.Received(1).Invoke();
+        }
+
+        [Test]
+        public void Call_Trigger_Callback_With_False_Value_When_It_Finishes_And_No_Transition_Has_Been_Made()
+        {
+            _stateMachine.Trigger(_trigger1, _triggerCallback);
+
+            _triggerCallback.Received(1).Invoke(false);
+        }
+
+        [Test]
+        public void Call_Trigger_Callback_With_True_Value_When_It_Finishes_And_A_Transition_Has_Been_Made()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1, _triggerCallback);
+
+            _triggerCallback.Received(1).Invoke(true);
+        }
+
+        [Test]
+        public void Call_Send_Event_Callback_With_False_Value_When_It_Finishes_And_The_Event_Was_Not_Handled()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateEventHandler1.HandleEvent(_event1).Returns(false);
+
+            _stateMachine.Start();
+
+            _stateMachine.SendEvent(_event1, _sendEventCallback);
+
+            _sendEventCallback.Received(1).Invoke(false);
+        }
+
+        [Test]
+        public void Call_Send_Event_Callback_With_True_Value_When_It_Finishes_And_The_Event_Was_Handled()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateEventHandler1.HandleEvent(_event1).Returns(true);
+
+            _stateMachine.Start();
+
+            _stateMachine.SendEvent(_event1, _sendEventCallback);
+
+            _sendEventCallback.Received(1).Invoke(true);
         }
     }
 }
