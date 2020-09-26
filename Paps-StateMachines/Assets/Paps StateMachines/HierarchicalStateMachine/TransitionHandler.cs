@@ -122,7 +122,7 @@ namespace Paps.StateMachines
                                 if (hasOneValid)
                                 {
                                     _pendingTriggers.Clear();
-                                    throw new MultipleValidTransitionsFromSameStateException(stateFrom.ToString(), trigger.ToString());
+                                    //throw new MultipleValidTransitionsFromSameStateException(stateFrom.ToString(), trigger.ToString());
                                 }
                                 else
                                 {

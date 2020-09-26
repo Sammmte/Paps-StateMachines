@@ -3,14 +3,14 @@ using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
-    internal class PlainEventDispatcher<TState>
+    internal class PlainEventDispatcher<TState, TTrigger>
     {
         private IEqualityComparer<TState> _stateComparer;
         private Dictionary<TState, List<IStateEventHandler>> _eventHandlers;
 
-        private PlainStateBehaviourScheduler<TState> _stateBehaviourScheduler;
+        private PlainStateBehaviourScheduler<TState, TTrigger> _stateBehaviourScheduler;
 
-        public PlainEventDispatcher(IEqualityComparer<TState> stateComparer, PlainStateBehaviourScheduler<TState> stateBehaviourScheduler)
+        public PlainEventDispatcher(IEqualityComparer<TState> stateComparer, PlainStateBehaviourScheduler<TState, TTrigger> stateBehaviourScheduler)
         {
             _stateComparer = stateComparer ?? throw new ArgumentNullException(nameof(stateComparer));
 

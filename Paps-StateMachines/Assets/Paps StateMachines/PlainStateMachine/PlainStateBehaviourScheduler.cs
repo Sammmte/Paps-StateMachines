@@ -2,33 +2,36 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Paps.StateMachines
 {
-    internal class PlainStateBehaviourScheduler<TState>
+    internal class PlainStateBehaviourScheduler<TState, TTrigger>
     {
         public Maybe<TState> CurrentState
         {
             get
             {
-                if (IsStarted)
+                if (IsRunning)
                     return _currentState.ToMaybe();
                 else
                     return Maybe<TState>.Nothing;
             }
         }
-        public bool IsStarted { get; private set; }
+        public bool IsRunning { get; private set; }
 
-        private readonly PlainStateCollection<TState> _states;
+        private readonly IPlainStateMachine<TState, TTrigger> _stateMachine;
+        private readonly PlainStateCollection<TState, TTrigger> _states;
 
         private IState _currentStateObject;
         private TState _currentState { get; set; }
 
         private IEqualityComparer<TState> _stateComparer;
 
-        public PlainStateBehaviourScheduler(PlainStateCollection<TState> stateCollection, IEqualityComparer<TState> stateComparer)
+        public PlainStateBehaviourScheduler(IPlainStateMachine<TState, TTrigger> stateMachine, PlainStateCollection<TState, TTrigger> stateCollection, IEqualityComparer<TState> stateComparer)
         {
             _stateComparer = stateComparer;
+            _stateMachine = stateMachine;
             _states = stateCollection;
         }
 
@@ -39,7 +42,7 @@ namespace Paps.StateMachines
             _currentState = _states.InitialState.Value;
             _currentStateObject = _states.GetStateObjectById(_states.InitialState.Value);
 
-            IsStarted = true;
+            IsRunning = true;
 
             _currentStateObject.Enter();
         }
@@ -53,25 +56,25 @@ namespace Paps.StateMachines
 
         private void ValidateIsNotStarted()
         {
-            if (IsStarted)
-                throw new StateMachineStartedException();
+            if (IsRunning)
+                throw new StateMachineRunningException(_stateMachine);
         }
 
         private void ValidateIsNotEmpty()
         {
             if (_states.StateCount == 0)
-                throw new EmptyStateMachineException("State machine has no states");
+                throw new EmptyStateMachineException(_stateMachine);
         }
 
         private void ValidateInitialState()
         {
             if (_states.InitialState.HasValue == false)
-                throw new InvalidInitialStateException("Initial state is not set");
+                throw new InvalidInitialStateException(_stateMachine);
         }
 
         public void Update()
         {
-            if(IsStarted)
+            if(IsRunning)
             {
                 _currentStateObject.Update();
             }
@@ -79,11 +82,11 @@ namespace Paps.StateMachines
 
         public void Stop()
         {
-            if(IsStarted)
+            if(IsRunning)
             {
                 var lastStateObject = _currentStateObject;
 
-                IsStarted = false;
+                IsRunning = false;
                 _currentState = default;
                 _currentStateObject = default;
 
@@ -91,7 +94,7 @@ namespace Paps.StateMachines
             }
         }
 
-        public bool CanSwitch() => IsStarted;
+        public bool CanSwitch() => IsRunning;
 
         public void SwitchTo(TState stateId, Action onStateChanged)
         {

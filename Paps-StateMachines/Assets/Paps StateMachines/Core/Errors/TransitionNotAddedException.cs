@@ -4,13 +4,21 @@ namespace Paps.StateMachines
 {
     public class TransitionNotAddedException : Exception
     {
-        public object StateFrom { get; private set; }
-        public object Trigger { get; private set; }
-        public object StateTo { get; private set; }
+        public object StateMachine { get; }
+        public object StateFrom { get; }
+        public object Trigger { get; }
+        public object StateTo { get; }
 
-        public TransitionNotAddedException(object stateFrom, object trigger, object stateTo) 
-            : base("Check StateFrom, Trigger and StateTo properties for more information")
+        public TransitionNotAddedException(object stateMachine, object stateFrom, object trigger, object stateTo) 
+            : this(stateMachine, stateFrom, trigger, stateTo, "Check StateFrom, Trigger and StateTo properties for more information")
         {
+
+        }
+
+        public TransitionNotAddedException(object stateMachine, object stateFrom, object trigger, object stateTo, string message) 
+            : base(message)
+        {
+            StateMachine = stateMachine;
             StateFrom = stateFrom;
             Trigger = trigger;
             StateTo = stateTo;

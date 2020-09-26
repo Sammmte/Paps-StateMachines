@@ -59,7 +59,7 @@ namespace Paps.StateMachines
 
         private void ValidateDoesNotContainsStateId(TState stateId)
         {
-            if (ContainsState(stateId)) throw new StateIdAlreadyAddedException(stateId.ToString());
+            //if (ContainsState(stateId)) throw new StateIdAlreadyAddedException(stateId.ToString());
         }
 
         public bool RemoveState(TState stateId)
@@ -284,7 +284,7 @@ namespace Paps.StateMachines
 
         private void ValidateContainsId(TState stateId)
         {
-            if (ContainsState(stateId) == false) throw new StateIdNotAddedException(stateId.ToString());
+            //if (ContainsState(stateId) == false) throw new StateIdNotAddedException(stateId.ToString());
         }
 
         private bool AreEquals(TState stateId1, TState stateId2)

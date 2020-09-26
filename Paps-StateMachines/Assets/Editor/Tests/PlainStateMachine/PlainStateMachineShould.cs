@@ -44,6 +44,9 @@ namespace Tests.PlainStateMachine
         protected IState _stateObject1, _stateObject2, _stateObject3, _stateObject4, _stateObject5;
         protected IGuardCondition _guardCondition1, _guardCondition2, _guardCondition3, _guardCondition4, _guardCondition5;
         protected IStateEventHandler _stateEventHandler1, _stateEventHandler2, _stateEventHandler3, _stateEventHandler4, _stateEventHandler5;
+        protected StateChanged<TState, TTrigger> _onBeforeStateChangesSubscriptor1, _onBeforeStateChangesSubscriptor2, 
+            _onBeforeStateChangesSubscriptor3;
+        protected StateChanged<TState, TTrigger> _onStateChangedSubscriptor1, _onStateChangedSubscriptor2, _onStateChangedSubscriptor3;
 
         [SetUp]
         public void SetUp()
@@ -79,6 +82,14 @@ namespace Tests.PlainStateMachine
             _stateEventHandler3 = Substitute.For<IStateEventHandler>();
             _stateEventHandler4 = Substitute.For<IStateEventHandler>();
             _stateEventHandler5 = Substitute.For<IStateEventHandler>();
+
+            _onBeforeStateChangesSubscriptor1 = Substitute.For<StateChanged<TState, TTrigger>>();
+            _onBeforeStateChangesSubscriptor2 = Substitute.For<StateChanged<TState, TTrigger>>();
+            _onBeforeStateChangesSubscriptor3 = Substitute.For<StateChanged<TState, TTrigger>>();
+
+            _onStateChangedSubscriptor1 = Substitute.For<StateChanged<TState, TTrigger>>();
+            _onStateChangedSubscriptor2 = Substitute.For<StateChanged<TState, TTrigger>>();
+            _onStateChangedSubscriptor3 = Substitute.For<StateChanged<TState, TTrigger>>();
         }
 
         [Test]
@@ -434,19 +445,19 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Return_That_Is_Started_When_It_Is()
+        public void Return_That_Is_Running_When_It_Is()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
 
-            Assert.That(_stateMachine.IsStarted == false, "Returns false before start");
+            Assert.That(_stateMachine.IsRunning == false, "Returns false before start");
 
             _stateMachine.Start();
 
-            Assert.That(_stateMachine.IsStarted, "Returns true after start");
+            Assert.That(_stateMachine.IsRunning, "Returns true after start");
 
             _stateMachine.Stop();
 
-            Assert.That(_stateMachine.IsStarted == false, "Returns false after stop");
+            Assert.That(_stateMachine.IsRunning == false, "Returns false after stop");
         }
 
         [Test]
@@ -461,7 +472,7 @@ namespace Tests.PlainStateMachine
             _stateMachine.AddState(_stateId1, _stateObject1);
             _stateMachine.Start();
 
-            Assert.Throws<StateMachineStartedException>(() => _stateMachine.Start());
+            Assert.Throws<StateMachineRunningException>(() => _stateMachine.Start());
         }
 
         [Test]
@@ -482,6 +493,122 @@ namespace Tests.PlainStateMachine
             _stateMachine.Start();
 
             Assert.That(_stateMachine.IsInState(_stateId1), "Returns true when asked if is in current state");
+        }
+
+        [Test]
+        public void Execute_Enter_Of_Initial_State_When_Started()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.Start();
+
+            _stateObject1.Received(1).Enter();
+        }
+
+        [Test]
+        public void Execute_Update_Of_Current_State_When_Updated()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.Start();
+
+            _stateMachine.Update();
+
+            _stateObject1.Received(1).Update();
+        }
+
+        [Test]
+        public void Execute_Exit_Of_Current_State_When_Stopped()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.Start();
+
+            _stateMachine.Stop();
+
+            _stateObject1.Received(1).Exit();
+        }
+
+        [Test]
+        public void Change_Current_State_When_A_Valid_Transition_Is_Triggered_With_No_Guard_Conditions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Assert.That(_stateMachine.CurrentState.Value.Equals(_stateId2), "Current state has changed");
+        }
+
+        [Test]
+        public void Execute_Previous_State_Exit_And_Then_New_Current_State_Enter_When_A_Transition_Has_Been_Triggered()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Received.InOrder(() =>
+            {
+                _stateObject1.Exit();
+                _stateObject2.Enter();
+            });
+        }
+
+        [Test]
+        public void Call_On_Before_State_Changes_Subscriptors_Before_Previous_State_Exit_When_A_Transition_Has_Been_Triggered()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.OnBeforeStateChanges += _onBeforeStateChangesSubscriptor1;
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Received.InOrder(() =>
+            {
+                _onBeforeStateChangesSubscriptor1.Invoke(_stateId1, _trigger1, _stateId2);
+                _stateObject1.Exit();
+            });
+        }
+
+        [Test]
+        public void Call_On_State_Changed_Subscriptors_After_Previous_State_Exit_And_Before_Current_State_Enter_When_A_Transition_Has_Been_Triggered()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.OnStateChanged += _onStateChangedSubscriptor1;
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Received.InOrder(() =>
+            {
+                _stateObject1.Exit();
+                _onStateChangedSubscriptor1.Invoke(_stateId1, _trigger1, _stateId2);
+                _stateObject2.Enter();
+            });
         }
     }
 }

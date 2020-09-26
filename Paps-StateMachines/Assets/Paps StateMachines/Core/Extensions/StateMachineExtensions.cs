@@ -399,7 +399,7 @@ namespace Paps.StateMachines.Extensions
             for (int i = 0; i < states.Length; i++)
             {
                 if (fsm.ContainsState(states[i].Item1))
-                    throw new StateIdAlreadyAddedException(states[i].Item1.ToString());
+                    throw new StateIdAlreadyAddedException(fsm, states[i].Item1.ToString());
             }
 
             for(int i = 0; i < states.Length; i++)

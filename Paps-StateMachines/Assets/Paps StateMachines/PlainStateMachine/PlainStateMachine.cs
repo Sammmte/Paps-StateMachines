@@ -31,7 +31,7 @@ namespace Paps.StateMachines
 
         public Maybe<TState> CurrentState => _stateBehaviourScheduler.CurrentState;
 
-        public bool IsStarted => _stateBehaviourScheduler.IsStarted;
+        public bool IsRunning => _stateBehaviourScheduler.IsRunning;
 
         public int StateCount => _states.StateCount;
 
@@ -39,11 +39,11 @@ namespace Paps.StateMachines
 
         public Maybe<TState> InitialState => _states.InitialState;
 
-        private PlainStateCollection<TState> _states;
-        private PlainStateBehaviourScheduler<TState> _stateBehaviourScheduler;
+        private PlainStateCollection<TState, TTrigger> _states;
+        private PlainStateBehaviourScheduler<TState, TTrigger> _stateBehaviourScheduler;
         private PlainTransitionValidator<TState, TTrigger> _transitionValidator;
         private PlainTransitionHandler<TState, TTrigger> _transitionHandler;
-        private PlainEventDispatcher<TState> _eventDispatcher;
+        private PlainEventDispatcher<TState, TTrigger> _eventDispatcher;
 
         private StateEqualityComparer _stateComparer;
         private TriggerEqualityComparer _triggerComparer;
@@ -62,12 +62,12 @@ namespace Paps.StateMachines
 
             _transitionComparer = new TransitionEqualityComparer<TState, TTrigger>(_stateComparer, _triggerComparer);
 
-            _states = new PlainStateCollection<TState>(_stateComparer);
-            _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState>(_states, _stateComparer);
+            _states = new PlainStateCollection<TState, TTrigger>(this, _stateComparer);
+            _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _stateComparer);
             _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(_transitionComparer);
-            _transitionHandler = new PlainTransitionHandler<TState, TTrigger>(_stateComparer, _triggerComparer, 
+            _transitionHandler = new PlainTransitionHandler<TState, TTrigger>(this, _stateComparer, _triggerComparer, 
                 _transitionComparer, _stateBehaviourScheduler, _transitionValidator);
-            _eventDispatcher = new PlainEventDispatcher<TState>(_stateComparer, _stateBehaviourScheduler);
+            _eventDispatcher = new PlainEventDispatcher<TState, TTrigger>(_stateComparer, _stateBehaviourScheduler);
         }
 
         public PlainStateMachine() : this(EqualityComparer<TState>.Default, EqualityComparer<TTrigger>.Default)
@@ -300,13 +300,13 @@ namespace Paps.StateMachines
         private void ValidateContainsState(TState stateId)
         {
             if (!ContainsState(stateId))
-                throw new StateIdNotAddedException(stateId);
+                throw new StateIdNotAddedException(this, stateId);
         }
 
         private void ValidateContainsTransition(Transition<TState, TTrigger> transition)
         {
             if (!ContainsTransition(transition))
-                throw new TransitionNotAddedException(transition.StateFrom, transition.Trigger, transition.StateTo);
+                throw new TransitionNotAddedException(this, transition.StateFrom, transition.Trigger, transition.StateTo);
         }
 
         #endregion

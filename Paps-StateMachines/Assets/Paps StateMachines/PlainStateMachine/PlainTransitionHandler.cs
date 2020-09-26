@@ -7,6 +7,7 @@ namespace Paps.StateMachines
     {
         public int TransitionCount => _transitions.Count;
 
+        private readonly IPlainStateMachine<TState, TTrigger> _stateMachine;
         private IEqualityComparer<TState> _stateComparer;
         private IEqualityComparer<TTrigger> _triggerComparer;
 
@@ -14,15 +15,16 @@ namespace Paps.StateMachines
 
         private HashSet<Transition<TState, TTrigger>> _transitions = new HashSet<Transition<TState, TTrigger>>();
 
-        private PlainStateBehaviourScheduler<TState> _stateBehaviourScheduler;
+        private PlainStateBehaviourScheduler<TState, TTrigger> _stateBehaviourScheduler;
 
-        public StateChanged<TState, TTrigger> OnBeforeStateChanges;
-        public StateChanged<TState, TTrigger> OnStateChanged;
+        public event StateChanged<TState, TTrigger> OnBeforeStateChanges;
+        public event StateChanged<TState, TTrigger> OnStateChanged;
 
-        public PlainTransitionHandler(IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer,
+        public PlainTransitionHandler(IPlainStateMachine<TState, TTrigger> stateMachine, IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer,
             IEqualityComparer<Transition<TState, TTrigger>> transitionComparer,
-            PlainStateBehaviourScheduler<TState> stateBehaviourScheduler, IPlainTransitionValidator<TState, TTrigger> transitionValidator)
+            PlainStateBehaviourScheduler<TState, TTrigger> stateBehaviourScheduler, IPlainTransitionValidator<TState, TTrigger> transitionValidator)
         {
+            _stateMachine = stateMachine;
             _stateComparer = stateComparer;
             _triggerComparer = triggerComparer;
             _transitionValidator = transitionValidator;
@@ -56,14 +58,26 @@ namespace Paps.StateMachines
 
             if (TryGetStateTo(trigger, out TState stateTo))
             {
-                OnBeforeStateChanges?.Invoke(_stateBehaviourScheduler.CurrentState.Value, trigger, stateTo);
-                _stateBehaviourScheduler.SwitchTo(stateTo, 
-                    () => OnStateChanged?.Invoke(_stateBehaviourScheduler.CurrentState.Value, trigger, stateTo));
+                var stateFrom = _stateBehaviourScheduler.CurrentState.Value;
+                NotifyBeforeStateChangesEvent(stateFrom, trigger, stateTo);
+                _stateBehaviourScheduler.SwitchTo(stateTo,
+                    () => NotifyStateChangedEvent(stateFrom, trigger, stateTo));
 
                 return true;
             }
 
             return false;
+        }
+
+        private void NotifyBeforeStateChangesEvent(TState stateFrom, TTrigger trigger, TState stateTo)
+        {
+            OnBeforeStateChanges?.Invoke(stateFrom, trigger, stateTo);
+        }
+
+        private void NotifyStateChangedEvent(TState stateFrom, TTrigger trigger, TState stateTo)
+        {
+            if(OnStateChanged != null)
+                OnStateChanged.Invoke(stateFrom, trigger, stateTo);
         }
 
         private bool TryGetStateTo(TTrigger trigger, out TState stateTo)
@@ -81,7 +95,7 @@ namespace Paps.StateMachines
                 {
                     if (multipleValidGuardsFlag)
                     {
-                        throw new MultipleValidTransitionsFromSameStateException(
+                        throw new MultipleValidTransitionsFromSameStateException(_stateMachine,
                             _stateBehaviourScheduler.CurrentState.Value, trigger, stateTo, transition.StateTo);
                     }
 

@@ -27,7 +27,7 @@ namespace Paps.StateMachines
 
         public int TransitionCount => _transitionHandler.TransitionCount;
 
-        public bool IsStarted { get; private set; }
+        public bool IsRunning { get; private set; }
 
         public Maybe<TState> InitialState => _stateHierarchy.InitialState;
 
@@ -289,24 +289,24 @@ namespace Paps.StateMachines
             ValidateIsNotStarted();
             ValidateIsNotEmpty();
 
-            IsStarted = true;
+            IsRunning = true;
 
             _stateHierarchyBehaviourScheduler.Enter();
         }
 
         private void ValidateIsNotEmpty()
         {
-            if (StateCount == 0) throw new EmptyStateMachineException();
+            //if (StateCount == 0) throw new EmptyStateMachineException();
         }
 
         public void Stop(Action callback = null)
         {
-            if(IsStarted)
+            if(IsRunning)
             {
                 _stateHierarchyBehaviourScheduler.Exit();
             }
 
-            IsStarted = false;
+            IsRunning = false;
         }
 
         public void Trigger(TTrigger trigger, Action<bool> callback = null)
@@ -382,27 +382,27 @@ namespace Paps.StateMachines
 
         private void ValidateContainsId(TState stateId)
         {
-            if (ContainsState(stateId) == false) throw new StateIdNotAddedException(stateId.ToString());
+            //if (ContainsState(stateId) == false) throw new StateIdNotAddedException(stateId.ToString());
         }
 
         private void ValidateContainsTransition(Transition<TState, TTrigger> transition)
         {
-            if (ContainsTransition(transition) == false)
+            /*if (ContainsTransition(transition) == false)
                 throw new TransitionNotAddedException(transition.StateFrom.ToString(),
                     transition.Trigger.ToString(),
-                    transition.StateTo.ToString());
+                    transition.StateTo.ToString());*/
         }
 
         private void ValidateIsStarted()
         {
-            if(IsStarted == false)
+            if(IsRunning == false)
                 throw new StateMachineNotStartedException();
         }
 
         private void ValidateIsNotStarted()
         {
-            if (IsStarted)
-                throw new StateMachineStartedException();
+            /*if (IsRunning)
+                throw new StateMachineRunningException();*/
         }
 
         private bool AreEquals(TState stateId1, TState stateId2)

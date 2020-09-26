@@ -4,14 +4,16 @@ namespace Paps.StateMachines
 {
     public class EmptyStateMachineException : Exception
     {
-        public EmptyStateMachineException()
+        public object StateMachine { get; }
+
+        public EmptyStateMachineException(object stateMachine) : this(stateMachine, "State machine has no states")
         {
 
         }
 
-        public EmptyStateMachineException(string message) : base(message)
+        public EmptyStateMachineException(object stateMachine, string message) : base(message)
         {
-
+            StateMachine = stateMachine;
         }
     }
 }

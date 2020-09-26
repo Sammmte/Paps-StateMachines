@@ -5,16 +5,18 @@ using System.Linq;
 
 namespace Paps.StateMachines
 {
-    internal class PlainStateCollection<TState>
+    internal class PlainStateCollection<TState, TTrigger>
     {
         private readonly Dictionary<TState, IState> _states = new Dictionary<TState, IState>();
+        private readonly IPlainStateMachine<TState, TTrigger> _stateMachine;
         private readonly IEqualityComparer<TState> _stateComparer;
 
         public Maybe<TState> InitialState { get; private set; }
         public int StateCount => _states.Count;
 
-        public PlainStateCollection(IEqualityComparer<TState> stateComparer)
+        public PlainStateCollection(IPlainStateMachine<TState, TTrigger> stateMachine, IEqualityComparer<TState> stateComparer)
         {
+            _stateMachine = stateMachine;
             _stateComparer = stateComparer;
         }
 
@@ -40,7 +42,7 @@ namespace Paps.StateMachines
             }
             else if (_states.ContainsKey(stateId))
             {
-                throw new StateIdAlreadyAddedException(stateId.ToString());
+                throw new StateIdAlreadyAddedException(_stateMachine, stateId.ToString());
             }
         }
 
@@ -55,7 +57,7 @@ namespace Paps.StateMachines
         {
             if (ContainsState(stateId) == false)
             {
-                throw new StateIdNotAddedException(stateId);
+                throw new StateIdNotAddedException(_stateMachine, stateId);
             }
         }
 

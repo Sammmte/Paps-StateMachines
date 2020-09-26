@@ -4,14 +4,16 @@ namespace Paps.StateMachines
 {
     public class InvalidInitialStateException : Exception
     {
-        public InvalidInitialStateException() : base("Initial state is invalid")
+        public object StateMachine { get; }
+
+        public InvalidInitialStateException(object stateMachine) : this(stateMachine, "Initial state is invalid")
         {
 
         }
 
-        public InvalidInitialStateException(string message) : base(message)
+        public InvalidInitialStateException(object stateMachine, string message) : base(message)
         {
-
+            StateMachine = stateMachine;
         }
     }
 }
