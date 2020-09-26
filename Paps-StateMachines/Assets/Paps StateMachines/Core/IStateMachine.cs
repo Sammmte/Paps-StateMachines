@@ -12,7 +12,7 @@ namespace Paps.StateMachines
 
         void SetInitialState(TState stateId);
 
-        void AddState(TState stateId, IState state);
+        void AddState(TState stateId, IState stateObject);
         bool RemoveState(TState stateId);
 
         bool ContainsState(TState stateId);
@@ -26,7 +26,7 @@ namespace Paps.StateMachines
 
         Transition<TState, TTrigger>[] GetTransitions();
 
-        IState GetStateById(TState stateId);
+        IState GetStateObjectById(TState stateId);
 
         void Trigger(TTrigger trigger, Action<bool> callback = null);
 

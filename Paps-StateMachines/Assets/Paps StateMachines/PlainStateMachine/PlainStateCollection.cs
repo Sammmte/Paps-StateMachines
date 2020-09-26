@@ -84,7 +84,7 @@ namespace Paps.StateMachines
             return false;
         }
 
-        public IState GetStateById(TState stateId)
+        public IState GetStateObjectById(TState stateId)
         {
             ValidateHasStateWithId(stateId);
 

@@ -125,7 +125,7 @@ namespace Tests.StateMachineExtensions
 
             fsm.AddTimerState(stateId1, TimeSpan.FromMilliseconds(1000), () => { });
 
-            Assert.That(fsm.GetStateById(stateId1) is TimerState, "Has a timer state");
+            Assert.That(fsm.GetStateObjectById(stateId1) is TimerState, "Has a timer state");
         }
 
         [Test]
@@ -137,7 +137,7 @@ namespace Tests.StateMachineExtensions
 
             fsm.AddEmpty(stateId1);
 
-            Assert.That(fsm.GetStateById(stateId1) is EmptyState, "Has an empty state");
+            Assert.That(fsm.GetStateObjectById(stateId1) is EmptyState, "Has an empty state");
         }
 
         [Test]
@@ -149,7 +149,7 @@ namespace Tests.StateMachineExtensions
 
             fsm.AddWithEvents(stateId1, () => { }, () => { }, () => { });
 
-            Assert.That(fsm.GetStateById(stateId1) is DelegateState, "Has a delegate state");
+            Assert.That(fsm.GetStateObjectById(stateId1) is DelegateState, "Has a delegate state");
         }
 
         [Test]
@@ -599,7 +599,7 @@ namespace Tests.StateMachineExtensions
 
             fsm.AddComposite(stateId1);
 
-            Assert.That(fsm.GetStateById(stateId1) is CompositeState, "Contains a composite state");
+            Assert.That(fsm.GetStateObjectById(stateId1) is CompositeState, "Contains a composite state");
         }
 
         [Test]
@@ -682,11 +682,11 @@ namespace Tests.StateMachineExtensions
                 {
                     if (cont == 1)
                     {
-                        item1 = fsm.GetStateById(state);
+                        item1 = fsm.GetStateObjectById(state);
                     }
                     else
                     {
-                        item2 = fsm.GetStateById(state);
+                        item2 = fsm.GetStateObjectById(state);
                     }
 
                     cont++;
@@ -695,7 +695,7 @@ namespace Tests.StateMachineExtensions
                 }
                 );
 
-            Assert.IsTrue(fsm.GetStateById(stateId1) == item1 && fsm.GetStateById(stateId2) == item2);
+            Assert.IsTrue(fsm.GetStateObjectById(stateId1) == item1 && fsm.GetStateObjectById(stateId2) == item2);
         }
 
         [Test]
@@ -709,7 +709,7 @@ namespace Tests.StateMachineExtensions
             var behaviouralState1 = fsm.AddWithBehaviours(stateId1);
 
             Assert.IsTrue(fsm.ContainsState(stateId1));
-            Assert.IsTrue(fsm.GetStateById(stateId1) == behaviouralState1);
+            Assert.IsTrue(fsm.GetStateObjectById(stateId1) == behaviouralState1);
 
             IStateBehaviour stateBehaviour1 = Substitute.For<IStateBehaviour>();
             IStateBehaviour stateBehaviour2 = Substitute.For<IStateBehaviour>();
@@ -717,7 +717,7 @@ namespace Tests.StateMachineExtensions
             var behaviouralState2 = fsm.AddWithBehaviours(stateId2, stateBehaviour1, stateBehaviour2);
 
             Assert.IsTrue(fsm.ContainsState(stateId2));
-            Assert.IsTrue(fsm.GetStateById(stateId2) == behaviouralState2);
+            Assert.IsTrue(fsm.GetStateObjectById(stateId2) == behaviouralState2);
             Assert.IsTrue(fsm.ContainsBehaviour(stateBehaviour1));
             Assert.IsTrue(fsm.ContainsBehaviour(stateBehaviour2));
             Assert.IsTrue(fsm.BehaviourCount() == 2);

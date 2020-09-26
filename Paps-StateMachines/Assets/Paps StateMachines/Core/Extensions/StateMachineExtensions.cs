@@ -19,7 +19,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (TState state in states)
             {
-                if (fsm.GetStateById(state) == stateRef)
+                if (fsm.GetStateObjectById(state) == stateRef)
                 {
                     return true;
                 }
@@ -36,7 +36,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (TState state in states)
             {
-                if (fsm.GetStateById(state) is T cast)
+                if (fsm.GetStateObjectById(state) is T cast)
                 {
                     candidate = cast;
                     break;
@@ -54,7 +54,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (TState state in states)
             {
-                if (fsm.GetStateById(state) is T cast)
+                if (fsm.GetStateObjectById(state) is T cast)
                 {
                     if (statesList == null)
                     {

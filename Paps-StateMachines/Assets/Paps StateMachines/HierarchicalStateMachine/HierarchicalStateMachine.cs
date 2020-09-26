@@ -167,7 +167,7 @@ namespace Paps.StateMachines
             return _transitionValidator.GetGuardConditionsOf(transition);
         }
 
-        public IState GetStateById(TState stateId)
+        public IState GetStateObjectById(TState stateId)
         {
             return _stateHierarchy.GetStateById(stateId);
         }

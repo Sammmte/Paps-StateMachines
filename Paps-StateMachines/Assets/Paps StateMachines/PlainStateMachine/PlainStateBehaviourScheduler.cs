@@ -37,7 +37,7 @@ namespace Paps.StateMachines
             ValidateCanStart();
 
             _currentState = _states.InitialState.Value;
-            _currentStateObject = _states.GetStateById(_states.InitialState.Value);
+            _currentStateObject = _states.GetStateObjectById(_states.InitialState.Value);
 
             IsStarted = true;
 
@@ -96,7 +96,7 @@ namespace Paps.StateMachines
         public void SwitchTo(TState stateId, Action onStateChanged)
         {
             var nextState = stateId;
-            var nextStateObj = _states.GetStateById(stateId);
+            var nextStateObj = _states.GetStateObjectById(stateId);
 
             _currentStateObject.Exit();
 

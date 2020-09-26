@@ -47,7 +47,6 @@ namespace Paps.StateMachines
 
         private StateEqualityComparer _stateComparer;
         private TriggerEqualityComparer _triggerComparer;
-
         private TransitionEqualityComparer<TState, TTrigger> _transitionComparer;
 
         private Queue<Action> _actionQueue = new Queue<Action>();
@@ -275,9 +274,9 @@ namespace Paps.StateMachines
             return _transitionHandler.GetTransitions();
         }
 
-        public IState GetStateById(TState stateId)
+        public IState GetStateObjectById(TState stateId)
         {
-            return _states.GetStateById(stateId);
+            return _states.GetStateObjectById(stateId);
         }
 
         public void Trigger(TTrigger trigger, Action<bool> callback = null)

@@ -133,8 +133,8 @@ namespace Tests.PlainStateMachine
             _stateMachine.AddState(_stateId1, _stateObject1);
             _stateMachine.AddState(_stateId2, _stateObject2);
 
-            Assert.AreEqual(_stateObject1, _stateMachine.GetStateById(_stateId1));
-            Assert.AreEqual(_stateObject2, _stateMachine.GetStateById(_stateId2));
+            Assert.AreEqual(_stateObject1, _stateMachine.GetStateObjectById(_stateId1));
+            Assert.AreEqual(_stateObject2, _stateMachine.GetStateObjectById(_stateId2));
         }
 
         [Test]
@@ -195,25 +195,6 @@ namespace Tests.PlainStateMachine
             _stateMachine.RemoveTransition(transition);
 
             Assert.That(_stateMachine.TransitionCount == 0, "Transition count has been decreased");
-        }
-
-        [Test]
-        public void Remove_Transitions_Related_To_A_State_Id_When_It_Is_Removed()
-        {
-            _stateMachine.AddState(_stateId1, _stateObject1);
-            _stateMachine.AddState(_stateId2, _stateObject2);
-
-            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
-
-            _stateMachine.AddTransition(transition);
-
-            _stateMachine.RemoveState(_stateId1);
-
-            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
-
-            _stateMachine.AddState(_stateId1, _stateObject1);
-
-            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
         }
 
         [Test]
@@ -311,26 +292,6 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Remove_Guard_Conditions_Related_To_A_Removed_Transition_When_A_Related_State_Is_Removed()
-        {
-            _stateMachine.AddState(_stateId1, _stateObject1);
-
-            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
-
-            _stateMachine.AddTransition(transition);
-
-            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
-
-            _stateMachine.RemoveState(_stateId1);
-
-            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
-
-            _stateMachine.AddState(_stateId1, _stateObject1);
-
-            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
-        }
-
-        [Test]
         public void Throw_An_Exception_When_Asked_To_Return_Guard_Conditions_Of_A_Not_Added_Transition()
         {
             var transition = NewTransition(_stateId1, _trigger1, _stateId1);
@@ -384,18 +345,19 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Remove_Event_Handlers_When_Their_Related_State_Is_Removed()
+        public void Remove_Transitions_Guard_Conditions_And_Event_Handlers_When_Their_Related_State_Is_Removed()
         {
-            _stateMachine.AddState(_stateId1, _stateObject1);
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
 
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddTransition(transition);
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
             _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
 
             _stateMachine.RemoveState(_stateId1);
 
-            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1) == false, "Event handler was removed");
-
-            _stateMachine.AddState(_stateId1, _stateObject1);
-
+            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
             Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1) == false, "Event handler was removed");
         }
 
@@ -447,6 +409,79 @@ namespace Tests.PlainStateMachine
             Assert.Throws<StateIdNotAddedException>(() => _stateMachine.SetInitialState(_stateId1));
         }
 
+        [Test]
+        public void Start_From_Initial_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
 
+            _stateMachine.Start();
+
+            Assert.That(_stateMachine.CurrentState.Value.Equals(_stateId1), "Started from initial state");
+        }
+
+        [Test]
+        public void Return_Nothing_From_Current_State_When_It_Is_Stopped()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.That(_stateMachine.CurrentState.HasValue == false, "Current state is nothing before start");
+
+            _stateMachine.Start();
+
+            _stateMachine.Stop();
+
+            Assert.That(_stateMachine.CurrentState.HasValue == false, "Current state is nothing after stop");
+        }
+
+        [Test]
+        public void Return_That_Is_Started_When_It_Is()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.That(_stateMachine.IsStarted == false, "Returns false before start");
+
+            _stateMachine.Start();
+
+            Assert.That(_stateMachine.IsStarted, "Returns true after start");
+
+            _stateMachine.Stop();
+
+            Assert.That(_stateMachine.IsStarted == false, "Returns false after stop");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_Is_Started_With_No_Added_State()
+        {
+            Assert.Throws<EmptyStateMachineException>(() => _stateMachine.Start());
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_Is_Started_Being_Already_Started()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.Start();
+
+            Assert.Throws<StateMachineStartedException>(() => _stateMachine.Start());
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_Is_Started_Without_Initial_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            _stateMachine.RemoveState(_stateId1);
+
+            Assert.Throws<InvalidInitialStateException>(() => _stateMachine.Start());
+        }
+
+        [Test]
+        public void Return_If_Is_In_A_Specified_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.Start();
+
+            Assert.That(_stateMachine.IsInState(_stateId1), "Returns true when asked if is in current state");
+        }
     }
 }

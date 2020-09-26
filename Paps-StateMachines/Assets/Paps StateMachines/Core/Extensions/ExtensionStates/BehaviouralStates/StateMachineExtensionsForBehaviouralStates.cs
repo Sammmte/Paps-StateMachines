@@ -17,7 +17,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
         {
             if (behaviour == null) throw new ArgumentNullException(nameof(behaviour));
 
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
@@ -30,7 +30,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
         {
             if (behaviours.Any(behaviour => behaviour == null)) throw new ArgumentNullException("some behaviour parameter is null");
 
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
@@ -46,7 +46,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
         {
             if (behaviour == null) throw new ArgumentNullException(nameof(behaviour));
 
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
@@ -71,7 +71,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
 
         public static TBehaviour GetBehaviourOf<TBehaviour, TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateId)
         {
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
@@ -103,7 +103,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
 
         public static TBehaviour[] GetBehavioursOf<TBehaviour, TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateId)
         {
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
@@ -130,7 +130,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
         {
             if (behaviour == null) throw new ArgumentNullException(nameof(behaviour));
 
-            IState state = fsm.GetStateById(stateId);
+            IState state = fsm.GetStateObjectById(stateId);
 
             if (state is BehaviouralState cast)
             {
@@ -156,7 +156,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
         {
             if (finishable == null) throw new ArgumentNullException(nameof(finishable));
 
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
@@ -179,7 +179,7 @@ namespace Paps.StateMachines.Extensions.BehaviouralStates
 
         public static int BehaviourCountOf<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateId)
         {
-            IState stateObj = fsm.GetStateById(stateId);
+            IState stateObj = fsm.GetStateObjectById(stateId);
 
             if (stateObj is BehaviouralState cast)
             {
