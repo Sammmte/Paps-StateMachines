@@ -116,9 +116,6 @@ namespace Paps.StateMachines
             var nextState = stateId;
             var nextStateObj = _states.GetStateObjectById(stateId);
 
-            _states.Unlock();
-            _transitions.Unlock();
-            _transitionValidator.Unlock();
             _states.ProtectState(nextState);
 
             NotifyBeforeStateChangesEvent(previousState, trigger, nextState);
@@ -154,6 +151,9 @@ namespace Paps.StateMachines
 
             if (TryGetStateTo(trigger, out TState stateTo))
             {
+                _states.Unlock();
+                _transitions.Unlock();
+                _transitionValidator.Unlock();
                 SwitchTo(stateTo, trigger);
 
                 return true;

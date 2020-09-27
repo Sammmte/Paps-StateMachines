@@ -44,6 +44,7 @@ namespace Paps.StateMachines
         private PlainTransitionCollection<TState, TTrigger> _transitions;
         private PlainStateBehaviourScheduler<TState, TTrigger> _stateBehaviourScheduler;
         private PlainTransitionValidator<TState, TTrigger> _transitionValidator;
+        private PlainStateEventHandlerCollection<TState, TTrigger> _eventHandlers;
         private PlainEventDispatcher<TState, TTrigger> _eventDispatcher;
 
         private StateEqualityComparer _stateComparer;
@@ -67,7 +68,8 @@ namespace Paps.StateMachines
             _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(this, _transitionComparer);
             _transitions = new PlainTransitionCollection<TState, TTrigger>(this, _stateComparer, _triggerComparer, _transitionComparer);
             _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _transitions, _transitionValidator, _stateComparer, _triggerComparer);
-            _eventDispatcher = new PlainEventDispatcher<TState, TTrigger>(_stateComparer, _stateBehaviourScheduler);
+            _eventHandlers = new PlainStateEventHandlerCollection<TState, TTrigger>(this, _stateComparer);
+            _eventDispatcher = new PlainEventDispatcher<TState, TTrigger>(_eventHandlers, _stateBehaviourScheduler);
         }
 
         public PlainStateMachine() : this(EqualityComparer<TState>.Default, EqualityComparer<TTrigger>.Default)
@@ -153,24 +155,24 @@ namespace Paps.StateMachines
         {
             ValidateContainsState(stateId);
 
-            _eventDispatcher.AddEventHandlerTo(stateId, eventHandler);
+            _eventHandlers.AddEventHandlerTo(stateId, eventHandler);
         }
 
         public bool RemoveEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
         {
-            return _eventDispatcher.RemoveEventHandlerFrom(stateId, eventHandler);
+            return _eventHandlers.RemoveEventHandlerFrom(stateId, eventHandler);
         }
 
         public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
         {
-            return _eventDispatcher.HasEventHandlerOn(stateId, eventHandler);
+            return _eventHandlers.ContainsEventHandlerOn(stateId, eventHandler);
         }
 
         public IStateEventHandler[] GetEventHandlersOf(TState stateId)
         {
             ValidateContainsState(stateId);
 
-            return _eventDispatcher.GetEventHandlersOf(stateId);
+            return _eventHandlers.GetEventHandlersOf(stateId);
         }
 
         public void SendEvent(IEvent ev, Action<bool> callback = null)
@@ -237,7 +239,7 @@ namespace Paps.StateMachines
         {
             var removedTransitions = _transitions.RemoveTransitionsRelatedTo(stateId);
             _transitionValidator.RemoveAllGuardConditionsFrom(removedTransitions);
-            _eventDispatcher.RemoveEventHandlersFrom(stateId);
+            _eventHandlers.RemoveEventHandlersFrom(stateId);
         }
 
         public bool ContainsState(TState stateId)

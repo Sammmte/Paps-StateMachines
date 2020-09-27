@@ -929,12 +929,12 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Let_Remove_States_After_Transition()
+        public void Let_Remove_States_After_A_Succeeded_Transition()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
             _stateMachine.AddState(_stateId2, _stateObject2);
 
-            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
 
             _stateMachine.AddTransition(transition);
 
@@ -944,6 +944,24 @@ namespace Tests.PlainStateMachine
 
             Assert.DoesNotThrow(() => _stateMachine.RemoveState(_stateId1));
             Assert.That(_stateMachine.ContainsState(_stateId1) == false, "State was removed");
+        }
+
+        [Test]
+        public void Let_Remove_States_After_A_Failed_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger2);
+
+            Assert.DoesNotThrow(() => _stateMachine.RemoveState(_stateId2));
+            Assert.That(_stateMachine.ContainsState(_stateId2) == false, "State was removed");
         }
 
         [Test]
@@ -1046,13 +1064,14 @@ namespace Tests.PlainStateMachine
             _stateMachine.AddState(_stateId1, _stateObject1);
             _stateMachine.AddState(_stateId2, _stateObject2);
 
-            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+            var transition1 = NewTransition(_stateId1, _trigger1, _stateId2);
+            var transition2 = NewTransition(_stateId1, _trigger1, _stateId1);
 
-            _stateMachine.AddTransition(transition);
+            _stateMachine.AddTransition(transition1);
 
-            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.AddTransition(transition));
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.AddTransition(transition2));
 
-            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+            _stateMachine.AddGuardConditionTo(transition1, _guardCondition1);
 
             _stateMachine.Start();
 
@@ -1077,7 +1096,7 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Let_Remove_Or_Add_Transitions_After_Transition()
+        public void Let_Remove_Or_Add_Transitions_After_A_Succeeded_Transition()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
             _stateMachine.AddState(_stateId2, _stateObject2);
@@ -1088,7 +1107,30 @@ namespace Tests.PlainStateMachine
 
             _stateMachine.Start();
 
-            _stateMachine.Trigger(_trigger1);
+            _stateMachine.Trigger(_trigger1); //Succeeds
+
+            _stateMachine.RemoveTransition(transition);
+
+            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
+
+            _stateMachine.AddTransition(transition);
+
+            Assert.That(_stateMachine.ContainsTransition(transition), "Transition was added");
+        }
+
+        [Test]
+        public void Let_Remove_Or_Add_Transitions_After_A_Failed_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger2); //Fails
 
             _stateMachine.RemoveTransition(transition);
 
@@ -1128,7 +1170,7 @@ namespace Tests.PlainStateMachine
 
             _stateMachine.AddTransition(transition);
 
-            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.AddGuardConditionTo(transition, _guardCondition1));
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.AddGuardConditionTo(transition, _guardCondition2));
 
             _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
 
@@ -1160,7 +1202,7 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Let_Remove_Or_Add_Guard_Conditions_After_Transition()
+        public void Let_Remove_Or_Add_Guard_Conditions_After_A_Succeeded_Transition()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
             _stateMachine.AddState(_stateId2, _stateObject2);
@@ -1184,6 +1226,107 @@ namespace Tests.PlainStateMachine
             _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
 
             Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1), "Guard condition was added");
+        }
+
+        [Test]
+        public void Let_Remove_Or_Add_Guard_Conditions_After_A_Failed_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.IsValid().Returns(false);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1), "Guard condition was added");
+        }
+
+        [Test]
+        public void Prevent_Event_Handlers_From_Being_Removed_While_Sending_An_Event()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateEventHandler1.When(obj => obj.HandleEvent(Arg.Any<IEvent>()))
+                .Do(_ => _stateMachine.RemoveEventHandlerFrom(_stateId1, _stateEventHandler1));
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToRemoveStateMachineElementException>(() => _stateMachine.SendEvent(_event1));
+        }
+
+        [Test]
+        public void Prevent_Event_Handlers_From_Being_Added_While_Sending_An_Event()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateEventHandler1.When(obj => obj.HandleEvent(Arg.Any<IEvent>()))
+                .Do(_ => _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler2));
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToAddStateMachineElementException>(() => _stateMachine.SendEvent(_event1));
+        }
+
+        [Test]
+        public void Let_Add_Or_Remove_Event_Handlers_After_Sending_An_Event_That_Was_Handled()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateEventHandler1.HandleEvent(Arg.Any<IEvent>()).Returns(true);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.Start();
+
+            _stateMachine.SendEvent(_event1);
+
+            Assert.DoesNotThrow(() => _stateMachine.RemoveEventHandlerFrom(_stateId1, _stateEventHandler1));
+
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1) == false, "Event handler was removed");
+
+            Assert.DoesNotThrow(() => _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1));
+
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1), "Event handler was added");
+        }
+
+        [Test]
+        public void Let_Add_Or_Remove_Event_Handlers_After_Sending_An_Event_That_Was_Not_Handled()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateEventHandler1.HandleEvent(Arg.Any<IEvent>()).Returns(false);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.Start();
+
+            _stateMachine.SendEvent(_event1);
+
+            Assert.DoesNotThrow(() => _stateMachine.RemoveEventHandlerFrom(_stateId1, _stateEventHandler1));
+
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1) == false, "Event handler was removed");
+
+            Assert.DoesNotThrow(() => _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1));
+
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1), "Event handler was added");
         }
     }
 }
