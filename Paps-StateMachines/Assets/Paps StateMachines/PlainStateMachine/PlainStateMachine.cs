@@ -36,11 +36,12 @@ namespace Paps.StateMachines
 
         public int StateCount => _states.StateCount;
 
-        public int TransitionCount => _stateBehaviourScheduler.TransitionCount;
+        public int TransitionCount => _transitions.TransitionCount;
 
         public Maybe<TState> InitialState => _states.InitialState;
 
         private PlainStateCollection<TState, TTrigger> _states;
+        private PlainTransitionCollection<TState, TTrigger> _transitions;
         private PlainStateBehaviourScheduler<TState, TTrigger> _stateBehaviourScheduler;
         private PlainTransitionValidator<TState, TTrigger> _transitionValidator;
         private PlainEventDispatcher<TState, TTrigger> _eventDispatcher;
@@ -63,8 +64,9 @@ namespace Paps.StateMachines
             _transitionComparer = new TransitionEqualityComparer<TState, TTrigger>(_stateComparer, _triggerComparer);
 
             _states = new PlainStateCollection<TState, TTrigger>(this, _stateComparer);
-            _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(_transitionComparer);
-            _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _transitionValidator, _stateComparer, _triggerComparer);
+            _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(this, _transitionComparer);
+            _transitions = new PlainTransitionCollection<TState, TTrigger>(this, _stateComparer, _triggerComparer, _transitionComparer);
+            _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _transitions, _transitionValidator, _stateComparer, _triggerComparer);
             _eventDispatcher = new PlainEventDispatcher<TState, TTrigger>(_stateComparer, _stateBehaviourScheduler);
         }
 
@@ -214,14 +216,7 @@ namespace Paps.StateMachines
 
         public void AddState(TState stateId, IState state)
         {
-            if (stateId == null)
-            {
-                throw new ArgumentNullException(nameof(stateId));
-            }
-            else if (state == null)
-            {
-                throw new ArgumentNullException(nameof(state));
-            }
+            ValidateCanAddState(stateId, state);
 
             _states.AddState(stateId, state);
         }
@@ -240,7 +235,7 @@ namespace Paps.StateMachines
 
         private void RemoveObjectsRelatedTo(TState stateId)
         {
-            var removedTransitions = _stateBehaviourScheduler.RemoveTransitionsRelatedTo(stateId);
+            var removedTransitions = _transitions.RemoveTransitionsRelatedTo(stateId);
             _transitionValidator.RemoveAllGuardConditionsFrom(removedTransitions);
             _eventDispatcher.RemoveEventHandlersFrom(stateId);
         }
@@ -263,12 +258,12 @@ namespace Paps.StateMachines
             ValidateContainsState(transition.StateFrom);
             ValidateContainsState(transition.StateTo);
 
-            _stateBehaviourScheduler.AddTransition(transition);
+            _transitions.AddTransition(transition);
         }
 
         public bool RemoveTransition(Transition<TState, TTrigger> transition)
         {
-            if(_stateBehaviourScheduler.RemoveTransition(transition))
+            if(_transitions.RemoveTransition(transition))
             {
                 _transitionValidator.RemoveAllGuardConditionsFrom(transition);
 
@@ -280,12 +275,12 @@ namespace Paps.StateMachines
 
         public bool ContainsTransition(Transition<TState, TTrigger> transition)
         {
-            return _stateBehaviourScheduler.ContainsTransition(transition);
+            return _transitions.ContainsTransition(transition);
         }
 
         public Transition<TState, TTrigger>[] GetTransitions()
         {
-            return _stateBehaviourScheduler.GetTransitions();
+            return _transitions.GetTransitions();
         }
 
         public IState GetStateObjectById(TState stateId)
@@ -309,8 +304,6 @@ namespace Paps.StateMachines
             return _stateBehaviourScheduler.IsInState(stateId);
         }
 
-        #region VALIDATIONS
-
         private void ValidateContainsState(TState stateId)
         {
             if (!ContainsState(stateId))
@@ -323,7 +316,17 @@ namespace Paps.StateMachines
                 throw new TransitionNotAddedException(this, transition.StateFrom, transition.Trigger, transition.StateTo);
         }
 
-        #endregion
+        private void ValidateCanAddState(TState stateId, IState state)
+        {
+            if (stateId == null)
+            {
+                throw new ArgumentNullException(nameof(stateId));
+            }
+            else if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+        }
 
         private class StateEqualityComparer : IEqualityComparer<TState>
         {

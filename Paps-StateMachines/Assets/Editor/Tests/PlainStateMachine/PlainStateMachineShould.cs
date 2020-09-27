@@ -947,30 +947,6 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Let_Remove_States_When_Previous_State_Exit_Method_Is_Being_Executed_Except_From_The_Involved_States()
-        {
-            _stateMachine.AddState(_stateId1, _stateObject1);
-            _stateMachine.AddState(_stateId2, _stateObject2);
-            _stateMachine.AddState(_stateId3, _stateObject3);
-
-            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
-
-            _stateMachine.AddTransition(transition);
-
-            _stateObject1.When(obj => obj.Exit()).Do(_ =>
-            {
-                _stateMachine.RemoveState(_stateId3);
-                _stateMachine.RemoveState(_stateId1);
-            });
-
-            _stateMachine.Start();
-
-            var exception = Assert.Throws<ProtectedStateException>(() => _stateMachine.Trigger(_trigger1));
-
-            Assert.That(exception.StateId.Equals(_stateId1), "Exception was thrown when tried to remove stateId1 (previous state)");
-        }
-
-        [Test]
         public void Let_Remove_States_When_OnBeforeStateChanges_Event_Is_Being_Executed_Except_From_The_Involved_States()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
@@ -1043,6 +1019,171 @@ namespace Tests.PlainStateMachine
 
             Assert.DoesNotThrow(() => _stateMachine.Stop());
             Assert.That(_stateMachine.ContainsState(_stateId1) == false, "State was removed");
+        }
+
+        [Test]
+        public void Prevent_Transitions_From_Being_Removed_When_A_Transition_Is_Being_Evaluated()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.RemoveTransition(transition));
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToRemoveStateMachineElementException>(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Prevent_Transitions_From_Being_Added_When_A_Transition_Is_Being_Evaluated()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.AddTransition(transition));
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToAddStateMachineElementException>(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Let_Remove_Transitions_When_A_Transition_Is_Taking_Place()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateObject1.When(obj => obj.Exit()).Do(_ => _stateMachine.RemoveTransition(transition));
+
+            _stateMachine.Start();
+
+            Assert.DoesNotThrow(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Let_Remove_Or_Add_Transitions_After_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            _stateMachine.RemoveTransition(transition);
+
+            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
+
+            _stateMachine.AddTransition(transition);
+
+            Assert.That(_stateMachine.ContainsTransition(transition), "Transition was added");
+        }
+
+        [Test]
+        public void Prevent_Guard_Conditions_From_Being_Removed_When_A_Transition_Is_Being_Evaluated()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1));
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToRemoveStateMachineElementException>(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Prevent_Guard_Conditions_From_Being_Added_When_A_Transition_Is_Being_Evaluated()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.AddGuardConditionTo(transition, _guardCondition1));
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToAddStateMachineElementException>(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Let_Remove_Guard_Conditions_When_A_Transition_Is_Taking_Place()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.IsValid().Returns(true);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateObject1.When(obj => obj.Exit()).Do(_ => _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1));
+
+            _stateMachine.Start();
+
+            Assert.DoesNotThrow(() => _stateMachine.Trigger(_trigger1));
+            _stateObject1.Received(1).Exit();
+        }
+
+        [Test]
+        public void Let_Remove_Or_Add_Guard_Conditions_After_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.IsValid().Returns(true);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1), "Guard condition was added");
         }
     }
 }

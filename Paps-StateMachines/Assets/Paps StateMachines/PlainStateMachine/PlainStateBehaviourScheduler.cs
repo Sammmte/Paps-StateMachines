@@ -6,8 +6,6 @@ namespace Paps.StateMachines
 {
     internal class PlainStateBehaviourScheduler<TState, TTrigger>
     {
-        public int TransitionCount => _transitions.Count;
-
         public Maybe<TState> CurrentState
         {
             get
@@ -26,8 +24,8 @@ namespace Paps.StateMachines
 
         private readonly IPlainStateMachine<TState, TTrigger> _stateMachine;
         private readonly PlainStateCollection<TState, TTrigger> _states;
-        private readonly HashSet<Transition<TState, TTrigger>> _transitions = new HashSet<Transition<TState, TTrigger>>();
-        private readonly IPlainTransitionValidator<TState, TTrigger> _transitionValidator;
+        private readonly PlainTransitionCollection<TState, TTrigger> _transitions;
+        private readonly PlainTransitionValidator<TState, TTrigger> _transitionValidator;
         private readonly IEqualityComparer<TState> _stateComparer;
         private readonly IEqualityComparer<TTrigger> _triggerComparer;
 
@@ -35,13 +33,15 @@ namespace Paps.StateMachines
         private TState _currentState { get; set; }
 
         public PlainStateBehaviourScheduler(IPlainStateMachine<TState, TTrigger> stateMachine,
-            PlainStateCollection<TState, TTrigger> stateCollection, IPlainTransitionValidator<TState, TTrigger> transitionValidator,
+            PlainStateCollection<TState, TTrigger> stateCollection, PlainTransitionCollection<TState, TTrigger> transitionCollection,
+            PlainTransitionValidator<TState, TTrigger> transitionValidator,
             IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer)
         {
             _stateComparer = stateComparer;
             _triggerComparer = triggerComparer;
             _stateMachine = stateMachine;
             _states = stateCollection;
+            _transitions = transitionCollection;
             _transitionValidator = transitionValidator;
         }
 
@@ -117,6 +117,8 @@ namespace Paps.StateMachines
             var nextStateObj = _states.GetStateObjectById(stateId);
 
             _states.Unlock();
+            _transitions.Unlock();
+            _transitionValidator.Unlock();
             _states.ProtectState(nextState);
 
             NotifyBeforeStateChangesEvent(previousState, trigger, nextState);
@@ -141,41 +143,24 @@ namespace Paps.StateMachines
             return false;
         }
 
-        public void AddTransition(Transition<TState, TTrigger> transition)
-        {
-            _transitions.Add(transition);
-        }
-
-        public bool RemoveTransition(Transition<TState, TTrigger> transition)
-        {
-            return _transitions.Remove(transition);
-        }
-
-        public bool ContainsTransition(Transition<TState, TTrigger> transition)
-        {
-            return _transitions.Contains(transition);
-        }
-
-        public Transition<TState, TTrigger>[] GetTransitions()
-        {
-            return _transitions.ToArray();
-        }
-
         public bool Trigger(TTrigger trigger)
         {
             if (!CanSwitch())
                 return false;
 
             _states.LockRemove();
+            _transitions.Lock();
+            _transitionValidator.Lock();
 
             if (TryGetStateTo(trigger, out TState stateTo))
             {
-                var stateFrom = CurrentState.Value;
                 SwitchTo(stateTo, trigger);
 
                 return true;
             }
 
+            _transitionValidator.Unlock();
+            _transitions.Unlock();
             _states.Unlock();
 
             return false;
@@ -218,32 +203,6 @@ namespace Paps.StateMachines
             }
 
             return modifiedFlag;
-        }
-
-        public List<Transition<TState, TTrigger>> RemoveTransitionsRelatedTo(TState stateId)
-        {
-            var toRemoveTransitions = GetTransitionsRelatedTo(stateId);
-
-            foreach (var transition in toRemoveTransitions)
-                _transitions.Remove(transition);
-
-            return toRemoveTransitions;
-        }
-
-        private List<Transition<TState, TTrigger>> GetTransitionsRelatedTo(TState stateId)
-        {
-            var list = new List<Transition<TState, TTrigger>>();
-
-            foreach (var transition in _transitions)
-            {
-                if (_stateComparer.Equals(transition.StateFrom, stateId) ||
-                    _stateComparer.Equals(transition.StateTo, stateId))
-                {
-                    list.Add(transition);
-                }
-            }
-
-            return list;
         }
     }
 }
