@@ -880,7 +880,7 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
-        public void Queue_Start_Stop_Update_Trigger_And_Send_Event_Actions()
+        public void Enqueue_Start_Stop_Update_Trigger_And_Send_Event_Actions()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
 
@@ -906,6 +906,143 @@ namespace Tests.PlainStateMachine
                 _triggerCallback.Invoke(Arg.Any<bool>());
                 _sendEventCallback.Invoke(Arg.Any<bool>());
             });
+        }
+
+        [Test]
+        public void Prevent_States_From_Being_Removed_When_A_Transition_Is_Being_Evaluated()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+            _stateMachine.AddState(_stateId3, _stateObject3);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _guardCondition1.When(obj => obj.IsValid()).Do(_ => _stateMachine.RemoveState(_stateId3));
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<UnableToRemoveStateMachineElementException>(() => _stateMachine.Trigger(_trigger1));
+        }
+
+        [Test]
+        public void Let_Remove_States_After_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.Start();
+
+            _stateMachine.Trigger(_trigger1);
+
+            Assert.DoesNotThrow(() => _stateMachine.RemoveState(_stateId1));
+            Assert.That(_stateMachine.ContainsState(_stateId1) == false, "State was removed");
+        }
+
+        [Test]
+        public void Let_Remove_States_When_Previous_State_Exit_Method_Is_Being_Executed_Except_From_The_Involved_States()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+            _stateMachine.AddState(_stateId3, _stateObject3);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateObject1.When(obj => obj.Exit()).Do(_ =>
+            {
+                _stateMachine.RemoveState(_stateId3);
+                _stateMachine.RemoveState(_stateId1);
+            });
+
+            _stateMachine.Start();
+
+            var exception = Assert.Throws<ProtectedStateException>(() => _stateMachine.Trigger(_trigger1));
+
+            Assert.That(exception.StateId.Equals(_stateId1), "Exception was thrown when tried to remove stateId1 (previous state)");
+        }
+
+        [Test]
+        public void Let_Remove_States_When_OnBeforeStateChanges_Event_Is_Being_Executed_Except_From_The_Involved_States()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+            _stateMachine.AddState(_stateId3, _stateObject3);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _onBeforeStateChangesSubscriptor1.When(obj => obj.Invoke(Arg.Any<TState>(), Arg.Any<TTrigger>(), Arg.Any<TState>()))
+                .Do(_ =>
+                {
+                    _stateMachine.RemoveState(_stateId3);
+                    _stateMachine.RemoveState(_stateId1);
+                });
+
+            _stateMachine.OnBeforeStateChanges += _onBeforeStateChangesSubscriptor1;
+
+            _stateMachine.Start();
+
+            var exception = Assert.Throws<ProtectedStateException>(() => _stateMachine.Trigger(_trigger1));
+
+            Assert.That(exception.StateId.Equals(_stateId1), "Exception was thrown when tried to remove stateId1 (previous state)");
+        }
+
+        [Test]
+        public void Let_Remove_States_Including_Previous_State_When_Next_State_Enter_Method_Is_Being_Executed_Except_From_Next_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+            _stateMachine.AddState(_stateId3, _stateObject3);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateObject2.When(obj => obj.Enter()).Do(_ =>
+            {
+                _stateMachine.RemoveState(_stateId3);
+                _stateMachine.RemoveState(_stateId1);
+                _stateMachine.RemoveState(_stateId2);
+            });
+
+            _stateMachine.Start();
+
+            var exception = Assert.Throws<ProtectedStateException>(() => _stateMachine.Trigger(_trigger1));
+
+            Assert.That(exception.StateId.Equals(_stateId2), "Exception was thrown when tried to remove stateId2 (next state)");
+        }
+
+        [Test]
+        public void Prevent_Initial_State_From_Being_Removed_When_Its_Enter_Method_Is_Being_Execute_On_Start()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateObject1.When(obj => obj.Enter()).Do(_ => _stateMachine.RemoveState(_stateId1));
+
+            Assert.Throws<ProtectedStateException>(() => _stateMachine.Start());
+        }
+
+        [Test]
+        public void Let_Remove_Current_State_When_Its_Exit_Method_Is_Being_Execute_On_Stop()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateObject1.When(obj => obj.Exit()).Do(_ => _stateMachine.RemoveState(_stateId1));
+
+            _stateMachine.Start();
+
+            Assert.DoesNotThrow(() => _stateMachine.Stop());
+            Assert.That(_stateMachine.ContainsState(_stateId1) == false, "State was removed");
         }
     }
 }

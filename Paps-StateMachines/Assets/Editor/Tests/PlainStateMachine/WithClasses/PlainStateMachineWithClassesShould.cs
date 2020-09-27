@@ -4,7 +4,7 @@ using System;
 
 namespace Tests.PlainStateMachine.WithClasses
 {
-    public class PlainStateMachineWithStructsShould : PlainStateMachineShould<string, string>
+    public class PlainStateMachineWithClassesShould : PlainStateMachineShould<string, string>
     {
         protected override string NewStateId()
         {
@@ -45,6 +45,12 @@ namespace Tests.PlainStateMachine.WithClasses
         public void Throw_An_Exception_When_User_Adds_A_Null_State_Id()
         {
             Assert.Throws<ArgumentNullException>(() => _stateMachine.AddState(null, _stateObject1));
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Asks_If_Contains_State_With_A_Null_Id()
+        {
+            Assert.Throws<ArgumentNullException>(() => _stateMachine.ContainsState(null));
         }
     }
 }

@@ -10,11 +10,11 @@ namespace Paps.StateMachines
         {
             add
             {
-                _transitionHandler.OnBeforeStateChanges += value;
+                _stateBehaviourScheduler.OnBeforeStateChanges += value;
             }
             remove
             {
-                _transitionHandler.OnBeforeStateChanges -= value;
+                _stateBehaviourScheduler.OnBeforeStateChanges -= value;
             }
         }
 
@@ -22,11 +22,11 @@ namespace Paps.StateMachines
         {
             add
             {
-                _transitionHandler.OnStateChanged += value;
+                _stateBehaviourScheduler.OnStateChanged += value;
             }
             remove
             {
-                _transitionHandler.OnStateChanged -= value;
+                _stateBehaviourScheduler.OnStateChanged -= value;
             }
         }
 
@@ -36,14 +36,13 @@ namespace Paps.StateMachines
 
         public int StateCount => _states.StateCount;
 
-        public int TransitionCount => _transitionHandler.TransitionCount;
+        public int TransitionCount => _stateBehaviourScheduler.TransitionCount;
 
         public Maybe<TState> InitialState => _states.InitialState;
 
         private PlainStateCollection<TState, TTrigger> _states;
         private PlainStateBehaviourScheduler<TState, TTrigger> _stateBehaviourScheduler;
         private PlainTransitionValidator<TState, TTrigger> _transitionValidator;
-        private PlainTransitionHandler<TState, TTrigger> _transitionHandler;
         private PlainEventDispatcher<TState, TTrigger> _eventDispatcher;
 
         private StateEqualityComparer _stateComparer;
@@ -64,10 +63,8 @@ namespace Paps.StateMachines
             _transitionComparer = new TransitionEqualityComparer<TState, TTrigger>(_stateComparer, _triggerComparer);
 
             _states = new PlainStateCollection<TState, TTrigger>(this, _stateComparer);
-            _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _stateComparer);
             _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(_transitionComparer);
-            _transitionHandler = new PlainTransitionHandler<TState, TTrigger>(this, _stateComparer, _triggerComparer, 
-                _transitionComparer, _stateBehaviourScheduler, _transitionValidator);
+            _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _transitionValidator, _stateComparer, _triggerComparer);
             _eventDispatcher = new PlainEventDispatcher<TState, TTrigger>(_stateComparer, _stateBehaviourScheduler);
         }
 
@@ -120,6 +117,7 @@ namespace Paps.StateMachines
             _actionQueue.Enqueue(() =>
             {
                 _stateBehaviourScheduler.Start();
+                
                 callback?.Invoke();
             });
 
@@ -131,6 +129,7 @@ namespace Paps.StateMachines
             _actionQueue.Enqueue(() =>
             {
                 _stateBehaviourScheduler.Stop();
+
                 callback?.Invoke();
             });
 
@@ -215,13 +214,20 @@ namespace Paps.StateMachines
 
         public void AddState(TState stateId, IState state)
         {
+            if (stateId == null)
+            {
+                throw new ArgumentNullException(nameof(stateId));
+            }
+            else if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
             _states.AddState(stateId, state);
         }
 
         public bool RemoveState(TState stateId)
         {
-            ValidateIsNotTryingToRemoveCurrentState(stateId);
-
             if (_states.RemoveState(stateId))
             {
                 RemoveObjectsRelatedTo(stateId);
@@ -234,13 +240,16 @@ namespace Paps.StateMachines
 
         private void RemoveObjectsRelatedTo(TState stateId)
         {
-            var removedTransitions = _transitionHandler.RemoveTransitionsRelatedTo(stateId);
+            var removedTransitions = _stateBehaviourScheduler.RemoveTransitionsRelatedTo(stateId);
             _transitionValidator.RemoveAllGuardConditionsFrom(removedTransitions);
             _eventDispatcher.RemoveEventHandlersFrom(stateId);
         }
 
         public bool ContainsState(TState stateId)
         {
+            if (stateId == null)
+                throw new ArgumentNullException(nameof(stateId));
+
             return _states.ContainsState(stateId);
         }
 
@@ -254,12 +263,12 @@ namespace Paps.StateMachines
             ValidateContainsState(transition.StateFrom);
             ValidateContainsState(transition.StateTo);
 
-            _transitionHandler.AddTransition(transition);
+            _stateBehaviourScheduler.AddTransition(transition);
         }
 
         public bool RemoveTransition(Transition<TState, TTrigger> transition)
         {
-            if(_transitionHandler.RemoveTransition(transition))
+            if(_stateBehaviourScheduler.RemoveTransition(transition))
             {
                 _transitionValidator.RemoveAllGuardConditionsFrom(transition);
 
@@ -271,12 +280,12 @@ namespace Paps.StateMachines
 
         public bool ContainsTransition(Transition<TState, TTrigger> transition)
         {
-            return _transitionHandler.ContainsTransition(transition);
+            return _stateBehaviourScheduler.ContainsTransition(transition);
         }
 
         public Transition<TState, TTrigger>[] GetTransitions()
         {
-            return _transitionHandler.GetTransitions();
+            return _stateBehaviourScheduler.GetTransitions();
         }
 
         public IState GetStateObjectById(TState stateId)
@@ -288,7 +297,7 @@ namespace Paps.StateMachines
         {
             _actionQueue.Enqueue(() =>
             {
-                var hasChanged = _transitionHandler.Trigger(trigger);
+                var hasChanged = _stateBehaviourScheduler.Trigger(trigger);
                 callback?.Invoke(hasChanged);
             });
 
@@ -312,12 +321,6 @@ namespace Paps.StateMachines
         {
             if (!ContainsTransition(transition))
                 throw new TransitionNotAddedException(this, transition.StateFrom, transition.Trigger, transition.StateTo);
-        }
-
-        private void ValidateIsNotTryingToRemoveCurrentState(TState stateId)
-        {
-            if (IsInState(stateId))
-                throw new ProtectedStateException(this, stateId, "Cannot remove state " + stateId + " because it is the current state");
         }
 
         #endregion
