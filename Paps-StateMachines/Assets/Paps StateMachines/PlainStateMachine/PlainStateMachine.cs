@@ -17,6 +17,7 @@ namespace Paps.StateMachines
                 _transitionHandler.OnBeforeStateChanges -= value;
             }
         }
+
         public event StateChanged<TState, TTrigger> OnStateChanged
         {
             add
@@ -219,6 +220,8 @@ namespace Paps.StateMachines
 
         public bool RemoveState(TState stateId)
         {
+            ValidateIsNotTryingToRemoveCurrentState(stateId);
+
             if (_states.RemoveState(stateId))
             {
                 RemoveObjectsRelatedTo(stateId);
@@ -309,6 +312,12 @@ namespace Paps.StateMachines
         {
             if (!ContainsTransition(transition))
                 throw new TransitionNotAddedException(this, transition.StateFrom, transition.Trigger, transition.StateTo);
+        }
+
+        private void ValidateIsNotTryingToRemoveCurrentState(TState stateId)
+        {
+            if (IsInState(stateId))
+                throw new ProtectedStateException(this, stateId, "Cannot remove state " + stateId + " because it is the current state");
         }
 
         #endregion

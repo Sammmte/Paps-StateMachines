@@ -45,7 +45,7 @@ namespace Tests.PlainStateMachine
         protected IGuardCondition _guardCondition1, _guardCondition2, _guardCondition3, _guardCondition4, _guardCondition5;
         protected IStateEventHandler _stateEventHandler1, _stateEventHandler2, _stateEventHandler3, _stateEventHandler4, _stateEventHandler5;
         protected IEvent _event1;
-        protected StateChanged<TState, TTrigger> _onBeforeStateChangesSubscriptor1, _onBeforeStateChangesSubscriptor2, 
+        protected StateChanged<TState, TTrigger> _onBeforeStateChangesSubscriptor1, _onBeforeStateChangesSubscriptor2,
             _onBeforeStateChangesSubscriptor3;
         protected StateChanged<TState, TTrigger> _onStateChangedSubscriptor1, _onStateChangedSubscriptor2, _onStateChangedSubscriptor3;
         protected Action _startCallback;
@@ -501,6 +501,16 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
+        public void Throw_An_Exception_When_Asked_To_Remove_Current_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.Start();
+
+            Assert.Throws<ProtectedStateException>(() => _stateMachine.RemoveState(_stateId1));
+        }
+
+        [Test]
         public void Return_If_Is_In_A_Specified_State()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
@@ -867,6 +877,35 @@ namespace Tests.PlainStateMachine
             _stateMachine.SendEvent(_event1, _sendEventCallback);
 
             _sendEventCallback.Received(1).Invoke(true);
+        }
+
+        [Test]
+        public void Queue_Start_Stop_Update_Trigger_And_Send_Event_Actions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _startCallback.When(obj => obj.Invoke()).Do(_ =>
+            {
+                _stateMachine.Stop(_stopCallback);
+                _stopCallback.DidNotReceive().Invoke();
+                _stateMachine.Update(_updateCallback);
+                _updateCallback.DidNotReceive().Invoke();
+                _stateMachine.Trigger(_trigger1, _triggerCallback);
+                _triggerCallback.DidNotReceive().Invoke(Arg.Any<bool>());
+                _stateMachine.SendEvent(_event1, _sendEventCallback);
+                _sendEventCallback.DidNotReceive().Invoke(Arg.Any<bool>());
+            });
+
+            _stateMachine.Start(_startCallback);
+
+            Received.InOrder(() =>
+            {
+                _startCallback.Invoke();
+                _stopCallback.Invoke();
+                _updateCallback.Invoke();
+                _triggerCallback.Invoke(Arg.Any<bool>());
+                _sendEventCallback.Invoke(Arg.Any<bool>());
+            });
         }
     }
 }

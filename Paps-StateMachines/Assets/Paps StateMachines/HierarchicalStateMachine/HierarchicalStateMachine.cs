@@ -395,8 +395,8 @@ namespace Paps.StateMachines
 
         private void ValidateIsStarted()
         {
-            if(IsRunning == false)
-                throw new StateMachineNotStartedException();
+            /*if(IsRunning == false)
+                throw new StateMachineNotStartedException();*/
         }
 
         private void ValidateIsNotStarted()
