@@ -1,11 +1,356 @@
-﻿using System.Collections.Generic;
+﻿using Paps.Maybe;
 using System;
-using System.Linq;
-using Paps.Maybe;
+using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
     public class HierarchicalStateMachine<TState, TTrigger> : IHierarchicalStateMachine<TState, TTrigger>, IStartableStateMachine<TState, TTrigger>, IUpdatableStateMachine<TState, TTrigger>
+    {
+        public int StateCount => _stateHierarchy.StateCount;
+
+        public int TransitionCount => _transitions.TransitionCount;
+
+        public Maybe<TState> InitialState => _stateHierarchy.InitialState;
+
+        public bool IsRunning => _stateHierarchyBehaviourScheduler.IsRunning;
+
+        public event HierarchyPathChanged<TTrigger> OnBeforeActiveHierarchyPathChanges
+        {
+            add
+            {
+                _stateHierarchyBehaviourScheduler.OnBeforeActiveHierarchyPathChanges += value;
+            }
+
+            remove
+            {
+                _stateHierarchyBehaviourScheduler.OnBeforeActiveHierarchyPathChanges -= value;
+            }
+        }
+        public event HierarchyPathChanged<TTrigger> OnActiveHierarchyPathChanged
+        {
+            add
+            {
+                _stateHierarchyBehaviourScheduler.OnActiveHierarchyPathChanged += value;
+            }
+
+            remove
+            {
+                _stateHierarchyBehaviourScheduler.OnActiveHierarchyPathChanged -= value;
+            }
+        }
+
+        private StateHierarchy<TState, TTrigger> _stateHierarchy;
+        private StateHierarchyBehaviourScheduler<TState, TTrigger> _stateHierarchyBehaviourScheduler;
+        private HierarchicalTransitionValidator<TState, TTrigger> _transitionValidator;
+        private HierarchicalTransitionCollection<TState, TTrigger> _transitions;
+        private HierarchicalEventDispatcher<TState, TTrigger> _eventDispatcher;
+
+        private StateEqualityComparer _stateComparer;
+        private TriggerEqualityComparer _triggerComparer;
+        private IEqualityComparer<Transition<TState, TTrigger>> _transitionComparer;
+
+        private Queue<Action> _actionQueue = new Queue<Action>();
+        private bool _processingActions;
+
+        public HierarchicalStateMachine(IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer)
+        {
+            if (stateComparer == null) throw new ArgumentNullException(nameof(stateComparer));
+            if (triggerComparer == null) throw new ArgumentNullException(nameof(triggerComparer));
+
+            _stateComparer = new StateEqualityComparer(stateComparer);
+            _triggerComparer = new TriggerEqualityComparer(triggerComparer);
+
+            _transitionComparer = new TransitionEqualityComparer<TState, TTrigger>(_stateComparer, _triggerComparer);
+
+            _stateHierarchy = new StateHierarchy<TState, TTrigger>(this, _stateComparer);
+            _stateHierarchyBehaviourScheduler = new StateHierarchyBehaviourScheduler<TState, TTrigger>(this, _stateHierarchy, _transitions, _transitionValidator, _stateComparer, _triggerComparer);
+            _transitionValidator = new HierarchicalTransitionValidator<TState, TTrigger>(_stateComparer, _transitionComparer, _stateHierarchyBehaviourScheduler, _stateHierarchy);
+            _transitions = new HierarchicalTransitionCollection<TState, TTrigger>(this, _stateComparer, _transitionComparer);
+            _eventDispatcher = new HierarchicalEventDispatcher<TState, TTrigger>(_stateComparer, _stateHierarchyBehaviourScheduler);
+        }
+
+        public HierarchicalStateMachine() : this(EqualityComparer<TState>.Default, EqualityComparer<TTrigger>.Default)
+        {
+
+        }
+
+        public void SetStateComparer(IEqualityComparer<TState> stateComparer)
+        {
+            if (stateComparer == null) throw new ArgumentNullException(nameof(stateComparer));
+
+            _stateComparer.SetEqualityComparer(stateComparer);
+        }
+
+        public void SetTriggerComparer(IEqualityComparer<TTrigger> triggerComparer)
+        {
+            if (triggerComparer == null) throw new ArgumentNullException(nameof(triggerComparer));
+
+            _triggerComparer.SetEqualityComparer(triggerComparer);
+        }
+
+        private void ProcessActions()
+        {
+            if (_processingActions)
+                return;
+
+            _processingActions = true;
+
+            while (_actionQueue.Count > 0)
+                _actionQueue.Dequeue().Invoke();
+
+            _processingActions = false;
+        }
+
+        public void AddChildTo(TState parentState, TState childState)
+        {
+            _stateHierarchy.AddChildTo(parentState, childState);
+        }
+
+        public void AddEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
+        {
+            _eventDispatcher.AddEventHandlerTo(stateId, eventHandler);
+        }
+
+        public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
+        {
+            _transitionValidator.AddGuardConditionTo(transition, guardCondition);
+        }
+
+        public void AddState(TState stateId, IState stateObject)
+        {
+            _stateHierarchy.AddState(stateId, stateObject);
+        }
+
+        public void AddTransition(Transition<TState, TTrigger> transition)
+        {
+            _transitions.AddTransition(transition);
+        }
+
+        public bool AreImmediateParentAndChild(TState parentState, TState childState)
+        {
+            return _stateHierarchy.AreImmediateParentAndChild(parentState, childState);
+        }
+
+        public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
+        {
+            return _eventDispatcher.ContainsEventHandlerOn(stateId, eventHandler);
+        }
+
+        public bool ContainsGuardConditionOn(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
+        {
+            return _transitionValidator.ContainsGuardConditionOn(transition, guardCondition);
+        }
+
+        public bool ContainsState(TState stateId)
+        {
+            return _stateHierarchy.ContainsState(stateId);
+        }
+
+        public bool ContainsTransition(Transition<TState, TTrigger> transition)
+        {
+            return _transitions.ContainsTransition(transition);
+        }
+
+        public HierarchyPath<TState> GetActiveHierarchyPath()
+        {
+            return _stateHierarchyBehaviourScheduler.GetActiveHierarchyPath();
+        }
+
+        public IStateEventHandler[] GetEventHandlersOf(TState stateId)
+        {
+            return _eventDispatcher.GetEventHandlersOf(stateId);
+        }
+
+        public IGuardCondition[] GetGuardConditionsOf(Transition<TState, TTrigger> transition)
+        {
+            return _transitionValidator.GetGuardConditionsOf(transition);
+        }
+
+        public TState[] GetImmediateChildsOf(TState parentId)
+        {
+            return _stateHierarchy.GetImmediateChildsOf(parentId);
+        }
+
+        public TState GetInitialStateOf(TState parentState)
+        {
+            return _stateHierarchy.GetInitialStateOf(parentState);
+        }
+
+        public TState GetParentOf(TState child)
+        {
+            return _stateHierarchy.GetParentOf(child);
+        }
+
+        public TState[] GetRoots()
+        {
+            return _stateHierarchy.GetRoots();
+        }
+
+        public IState GetStateObjectById(TState stateId)
+        {
+            return _stateHierarchy.GetStateObjectById(stateId);
+        }
+
+        public TState[] GetStates()
+        {
+            return _stateHierarchy.GetStates();
+        }
+
+        public Transition<TState, TTrigger>[] GetTransitions()
+        {
+            return _transitions.GetTransitions();
+        }
+
+        public bool IsInState(TState stateId)
+        {
+            return _stateHierarchyBehaviourScheduler.IsInState(stateId);
+        }
+
+        public bool RemoveChildFromParent(TState childState)
+        {
+            return _stateHierarchy.RemoveChildFromParent(childState);
+        }
+
+        public bool RemoveEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
+        {
+            return _eventDispatcher.RemoveEventHandlerFrom(stateId, eventHandler);
+        }
+
+        public bool RemoveGuardConditionFrom(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
+        {
+            return _transitionValidator.RemoveGuardConditionFrom(transition, guardCondition);
+        }
+
+        public bool RemoveState(TState stateId)
+        {
+            return _stateHierarchy.RemoveState(stateId);
+        }
+
+        public bool RemoveTransition(Transition<TState, TTrigger> transition)
+        {
+            return _transitions.RemoveTransition(transition);
+        }
+
+        public void SendEvent(IEvent ev, Action<bool> callback = null)
+        {
+            _actionQueue.Enqueue(() =>
+            {
+                var handled = _eventDispatcher.SendEvent(ev);
+
+                callback?.Invoke(handled);
+            });
+
+            ProcessActions();
+        }
+
+        public void SetInitialState(TState stateId)
+        {
+            _stateHierarchy.SetInitialState(stateId);
+        }
+
+        public void SetInitialStateTo(TState parentState, TState initialState)
+        {
+            _stateHierarchy.SetInitialStateTo(parentState, initialState);
+        }
+
+        public void Start(Action callback = null)
+        {
+            _actionQueue.Enqueue(() =>
+            {
+                _stateHierarchyBehaviourScheduler.Start();
+
+                callback?.Invoke();
+            });
+
+            ProcessActions();
+        }
+
+        public void Stop(Action callback = null)
+        {
+            _actionQueue.Enqueue(() =>
+            {
+                _stateHierarchyBehaviourScheduler.Stop();
+
+                callback?.Invoke();
+            });
+
+            ProcessActions();
+        }
+
+        public void Trigger(TTrigger trigger, Action<bool> callback = null)
+        {
+            _actionQueue.Enqueue(() =>
+            {
+                var hasChanged = _stateHierarchyBehaviourScheduler.Trigger(trigger);
+                callback?.Invoke(hasChanged);
+            });
+
+            ProcessActions();
+        }
+
+        public void Update(Action callback = null)
+        {
+            _actionQueue.Enqueue(() =>
+            {
+                _stateHierarchyBehaviourScheduler.Update();
+                callback?.Invoke();
+            });
+
+            ProcessActions();
+        }
+
+        private class StateEqualityComparer : IEqualityComparer<TState>
+        {
+            private IEqualityComparer<TState> _equalityComparer;
+
+            public StateEqualityComparer(IEqualityComparer<TState> equalityComparer)
+            {
+                SetEqualityComparer(equalityComparer);
+            }
+
+            public bool Equals(TState x, TState y)
+            {
+                return _equalityComparer.Equals(x, y);
+            }
+
+            public int GetHashCode(TState obj)
+            {
+                return _equalityComparer.GetHashCode(obj);
+            }
+
+            public void SetEqualityComparer(IEqualityComparer<TState> equalityComparer)
+            {
+                _equalityComparer = equalityComparer ?? EqualityComparer<TState>.Default;
+            }
+        }
+
+        private class TriggerEqualityComparer : IEqualityComparer<TTrigger>
+        {
+            private IEqualityComparer<TTrigger> _equalityComparer;
+
+            public TriggerEqualityComparer(IEqualityComparer<TTrigger> equalityComparer)
+            {
+                SetEqualityComparer(equalityComparer);
+            }
+
+            public bool Equals(TTrigger x, TTrigger y)
+            {
+                return _equalityComparer.Equals(x, y);
+            }
+
+            public int GetHashCode(TTrigger obj)
+            {
+                return _equalityComparer.GetHashCode(obj);
+            }
+
+            public void SetEqualityComparer(IEqualityComparer<TTrigger> equalityComparer)
+            {
+                _equalityComparer = equalityComparer ?? EqualityComparer<TTrigger>.Default;
+            }
+        }
+    }
+
+    /*public class HierarchicalStateMachine<TState, TTrigger> : IHierarchicalStateMachine<TState, TTrigger>, IStartableStateMachine<TState, TTrigger>, IUpdatableStateMachine<TState, TTrigger>
     {
         private enum StateMachineEvent
         {
@@ -390,19 +735,19 @@ namespace Paps.StateMachines
             /*if (ContainsTransition(transition) == false)
                 throw new TransitionNotAddedException(transition.StateFrom.ToString(),
                     transition.Trigger.ToString(),
-                    transition.StateTo.ToString());*/
+                    transition.StateTo.ToString());
         }
 
         private void ValidateIsStarted()
         {
             /*if(IsRunning == false)
-                throw new StateMachineNotStartedException();*/
+                throw new StateMachineNotStartedException();
         }
 
         private void ValidateIsNotStarted()
         {
             /*if (IsRunning)
-                throw new StateMachineRunningException();*/
+                throw new StateMachineRunningException();
         }
 
         private bool AreEquals(TState stateId1, TState stateId2)
@@ -429,5 +774,5 @@ namespace Paps.StateMachines
                 return EqualityComparer.GetHashCode(obj);
             }
         }
-    }
+    }*/
 }

@@ -3,41 +3,45 @@ using System;
 
 namespace Paps.StateMachines
 {
-    internal class StateHierarchyBehaviourScheduler<TState>
+    internal class StateHierarchyBehaviourScheduler<TState, TTrigger>
     {
-        private readonly StateHierarchy<TState> _stateHierarchy;
-
+        private readonly IHierarchicalStateMachine<TState, TTrigger> _stateMachine;
+        private readonly StateHierarchy<TState, TTrigger> _stateHierarchy;
+        private readonly HierarchicalTransitionCollection<TState, TTrigger> _transitions;
+        private readonly HierarchicalTransitionValidator<TState, TTrigger> _transitionValidator;
         private List<KeyValuePair<TState, IState>> _activeHierarchyPath;
 
         private IEqualityComparer<TState> _stateComparer;
+        private readonly IEqualityComparer<TTrigger> _triggerComparer;
 
-        public event Action OnBeforeActiveHierarchyPathChanges;
-        public event Action OnActiveHierarchyPathChanged;
+        public event HierarchyPathChanged<TTrigger> OnBeforeActiveHierarchyPathChanges;
+        public event HierarchyPathChanged<TTrigger> OnActiveHierarchyPathChanged;
 
-        public event Action OnTransitionFinished;
+        public bool IsRunning { get; private set; }
 
-        public bool IsEntering { get; private set; }
-        public bool IsUpdating { get; private set; }
-        public bool IsExiting { get; private set; }
-        public bool IsIdle => !IsEntering && !IsUpdating && !IsExiting;
-
-        public StateHierarchyBehaviourScheduler(StateHierarchy<TState> stateHierarchy, IEqualityComparer<TState> stateComparer)
+        public StateHierarchyBehaviourScheduler(IHierarchicalStateMachine<TState, TTrigger> stateMachine,
+            StateHierarchy<TState, TTrigger> stateHierarchy,
+            HierarchicalTransitionCollection<TState, TTrigger> transitions, 
+            HierarchicalTransitionValidator<TState, TTrigger> transitionValidator,
+            IEqualityComparer<TState> stateComparer,
+            IEqualityComparer<TTrigger> triggerComparer)
         {
+            _stateMachine = stateMachine;
             _stateHierarchy = stateHierarchy;
+            _transitions = transitions;
+            _transitionValidator = transitionValidator;
             _stateComparer = stateComparer;
-
+            _triggerComparer = triggerComparer;
             _activeHierarchyPath = new List<KeyValuePair<TState, IState>>();
         }
 
-        public void Enter()
+        public void Start()
         {
-            IsEntering = true;
-
             AddToActivesFrom(_stateHierarchy.InitialState.Value);
 
-            EnterActivesFrom(_stateHierarchy.InitialState.Value);
+            IsRunning = true;
 
-            IsEntering = false;
+            EnterActivesFrom(_stateHierarchy.InitialState.Value);
         }
 
         private void AddToActivesFrom(TState stateId)
@@ -72,15 +76,16 @@ namespace Paps.StateMachines
             }
         }
 
-        public void Exit()
+        public void Stop()
         {
-            IsExiting = true;
+            if(IsRunning)
+            {
+                IsRunning = false;
 
-            ExitActivesUntil(_activeHierarchyPath[0].Key);
+                ExitActivesUntil(_activeHierarchyPath[0].Key);
 
-            IsExiting = false;
-
-            _activeHierarchyPath.Clear();
+                _activeHierarchyPath.Clear();
+            }
         }
 
         private void RemoveFromActivesUntil(TState stateId)
@@ -107,19 +112,18 @@ namespace Paps.StateMachines
 
         public void Update()
         {
-            IsUpdating = true;
-            
+            if (!IsRunning)
+                return;
+
             for(int i = 0; i < _activeHierarchyPath.Count; i++)
             {
                 _activeHierarchyPath[i].Value.Update();
             }
-
-            IsUpdating = false;
         }
 
         private KeyValuePair<TState, IState> NewKeyValueFor(TState stateId)
         {
-            return new KeyValuePair<TState, IState>(stateId, _stateHierarchy.GetStateById(stateId));
+            return new KeyValuePair<TState, IState>(stateId, _stateHierarchy.GetStateObjectById(stateId));
         }
 
         private bool AreEquals(TState stateId1, TState stateId2)
@@ -127,9 +131,9 @@ namespace Paps.StateMachines
             return _stateComparer.Equals(stateId1, stateId2);
         }
 
-        public List<KeyValuePair<TState, IState>> GetActiveHierarchyPath()
+        public HierarchyPath<TState> GetActiveHierarchyPath()
         {
-            return _activeHierarchyPath;
+            return new HierarchyPath<TState>(_activeHierarchyPath);
         }
 
         public bool IsInState(TState stateId)
@@ -143,40 +147,68 @@ namespace Paps.StateMachines
             return false;
         }
 
-        public bool IsValidSwitchTo(TState stateId, out TState activeSibling)
+        private void SwitchTo(TTrigger trigger, TState sourceState, TState targetState)
         {
-            for(int i = 0; i < _activeHierarchyPath.Count; i++)
+            OnBeforeActiveHierarchyPathChanges?.Invoke(trigger);
+
+            ExitActivesUntil(sourceState);
+
+            RemoveFromActivesUntil(sourceState);
+
+            AddToActivesFrom(targetState);
+
+            OnActiveHierarchyPathChanged?.Invoke(trigger);
+
+            EnterActivesFrom(targetState);
+        }
+
+        public bool Trigger(TTrigger trigger)
+        {
+            if (!IsRunning)
+                return false;
+
+            if(TryGetTargetState(trigger, out TState sourceState, out TState targetState))
             {
-                if (AreEquals(_activeHierarchyPath[i].Key, stateId) ||
-                    _stateHierarchy.AreSiblings(_activeHierarchyPath[i].Key, stateId))
-                {
-                    activeSibling = _activeHierarchyPath[i].Key;
-                    return true;
-                } 
+                SwitchTo(trigger, sourceState, targetState);
+
+                return true;
             }
 
-            activeSibling = default;
             return false;
         }
 
-        public void SwitchTo(TState newActiveState)
+        private bool TryGetTargetState(TTrigger trigger, out TState sourceState, out TState targetState)
         {
-            if (IsValidSwitchTo(newActiveState, out TState activeSibling) == false)
-                throw new InvalidOperationException("Cannot switch to " + newActiveState);
+            sourceState = default;
+            targetState = default;
+            Transition<TState, TTrigger> validTransition = default;
+            bool hasOneValid = false;
 
-            OnBeforeActiveHierarchyPathChanges?.Invoke();
+            foreach (var transition in _transitions)
+            {
+                if (HasTrigger(transition, trigger) && _transitionValidator.IsValid(transition))
+                {
+                    if (hasOneValid)
+                    {
+                        throw new MultipleValidTransitionsException(_stateMachine, validTransition, transition);
+                    }
+                    else
+                    {
+                        hasOneValid = true;
+                        validTransition = transition;
+                        sourceState = transition.StateFrom;
+                        targetState = transition.StateTo;
+                    }
 
-            ExitActivesUntil(activeSibling);
+                }
+            }
 
-            RemoveFromActivesUntil(activeSibling);
+            return hasOneValid;
+        }
 
-            AddToActivesFrom(newActiveState);
-
-            OnActiveHierarchyPathChanged?.Invoke();
-
-            EnterActivesFrom(newActiveState);
-            
-            OnTransitionFinished?.Invoke();
+        private bool HasTrigger(Transition<TState, TTrigger> transition, TTrigger trigger)
+        {
+            return _triggerComparer.Equals(transition.Trigger, trigger);
         }
     }
 }

@@ -49,7 +49,7 @@ namespace Paps.StateMachines
 
         private StateEqualityComparer _stateComparer;
         private TriggerEqualityComparer _triggerComparer;
-        private TransitionEqualityComparer<TState, TTrigger> _transitionComparer;
+        private IEqualityComparer<Transition<TState, TTrigger>> _transitionComparer;
 
         private Queue<Action> _actionQueue = new Queue<Action>();
         private bool _processingActions;
@@ -66,7 +66,7 @@ namespace Paps.StateMachines
 
             _states = new PlainStateCollection<TState, TTrigger>(this, _stateComparer);
             _transitionValidator = new PlainTransitionValidator<TState, TTrigger>(this, _transitionComparer);
-            _transitions = new PlainTransitionCollection<TState, TTrigger>(this, _stateComparer, _triggerComparer, _transitionComparer);
+            _transitions = new PlainTransitionCollection<TState, TTrigger>(this, _stateComparer, _transitionComparer);
             _stateBehaviourScheduler = new PlainStateBehaviourScheduler<TState, TTrigger>(this, _states, _transitions, _transitionValidator, _stateComparer, _triggerComparer);
             _eventHandlers = new PlainStateEventHandlerCollection<TState, TTrigger>(this, _stateComparer);
             _eventDispatcher = new PlainEventDispatcher<TState, TTrigger>(_eventHandlers, _stateBehaviourScheduler);

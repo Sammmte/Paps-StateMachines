@@ -180,10 +180,11 @@ namespace Paps.StateMachines
         {
             stateTo = default;
 
+            Transition<TState, TTrigger> validTransition = default;
             bool modifiedFlag = false;
             bool multipleValidGuardsFlag = false;
 
-            foreach (Transition<TState, TTrigger> transition in _transitions)
+            foreach (var transition in _transitions)
             {
                 if (_stateComparer.Equals(transition.StateFrom, CurrentState.Value)
                     && _triggerComparer.Equals(transition.Trigger, trigger)
@@ -191,10 +192,11 @@ namespace Paps.StateMachines
                 {
                     if (multipleValidGuardsFlag)
                     {
-                        throw new MultipleValidTransitionsFromSameStateException(_stateMachine,
-                            CurrentState.Value, trigger, stateTo, transition.StateTo);
+                        throw new MultipleValidTransitionsException(_stateMachine,
+                            validTransition, transition);
                     }
 
+                    validTransition = transition;
                     stateTo = transition.StateTo;
 
                     modifiedFlag = true;

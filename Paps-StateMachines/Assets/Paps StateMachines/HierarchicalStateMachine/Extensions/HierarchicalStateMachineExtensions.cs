@@ -1,4 +1,6 @@
-﻿namespace Paps.StateMachines.Extensions
+﻿using System.Collections.Generic;
+
+namespace Paps.StateMachines.Extensions
 {
     public static class HierarchicalStateMachineExtensions
     {
@@ -10,11 +12,11 @@
             return false;
         }
 
-        public static void ForeachInActiveHierarchyPath<TState, TTrigger>(this IHierarchicalStateMachine<TState, TTrigger> hsm, ReturnTrueToFinishIteration<TState> finishable)
+        public static void ForeachInActiveHierarchyPath<TState, TTrigger>(this IHierarchicalStateMachine<TState, TTrigger> hsm, ReturnTrueToFinishIteration<KeyValuePair<TState, IState>> finishable)
         {
             var activeHierarchyPath = hsm.GetActiveHierarchyPath();
 
-            foreach(TState state in activeHierarchyPath)
+            foreach(var state in activeHierarchyPath)
             {
                 if(finishable(state))
                 {

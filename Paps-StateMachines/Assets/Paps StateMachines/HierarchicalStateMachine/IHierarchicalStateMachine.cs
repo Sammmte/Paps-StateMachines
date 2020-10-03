@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Paps.StateMachines
+﻿namespace Paps.StateMachines
 {
     public interface IHierarchicalStateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>, IGuardedStateMachine<TState, TTrigger>,
         IEventDispatcherStateMachine<TState, TTrigger>
@@ -12,13 +9,13 @@ namespace Paps.StateMachines
         void AddChildTo(TState parentState, TState childState);
         bool RemoveChildFromParent(TState childState);
 
-        bool AreImmediateParentAndChild(TState parentState, TState substate);
+        bool AreImmediateParentAndChild(TState parentState, TState childState);
 
-        IEnumerable<TState> GetActiveHierarchyPath();
+        HierarchyPath<TState> GetActiveHierarchyPath();
 
-        TState[] GetImmediateChildsOf(TState parent);
+        TState[] GetImmediateChildsOf(TState parentId);
 
-        TState GetParentOf(TState child);
+        TState GetParentOf(TState childId);
 
         void SetInitialStateTo(TState parentState, TState initialState);
         TState GetInitialStateOf(TState parentState);

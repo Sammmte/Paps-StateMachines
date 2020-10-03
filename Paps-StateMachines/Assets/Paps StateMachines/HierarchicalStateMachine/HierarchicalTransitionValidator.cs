@@ -1,29 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
-    internal class TransitionValidator<TState, TTrigger> : ITransitionValidator<TState, TTrigger>
+    internal class HierarchicalTransitionValidator<TState, TTrigger>
     {
         private Dictionary<Transition<TState, TTrigger>, List<IGuardCondition>> _guardConditions;
 
-        private IEqualityComparer<TState> _stateComparer;
-        private IEqualityComparer<TTrigger> _triggerComparer;
-        private StateHierarchyBehaviourScheduler<TState> _stateHierarchyBehaviourScheduler;
+        private readonly StateHierarchyBehaviourScheduler<TState, TTrigger> _stateHierarchyBehaviourScheduler;
+        private readonly StateHierarchy<TState, TTrigger> _stateHierarchy;
+        private readonly IEqualityComparer<TState> _stateComparer;
+        private IEqualityComparer<Transition<TState, TTrigger>> _transitionEqualityComparer;
 
-        private TransitionEqualityComparer<TState, TTrigger> _transitionComparer;
-
-        public TransitionValidator(IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer, 
-            StateHierarchyBehaviourScheduler<TState> stateHierarchyBehaviourScheduler)
+        public HierarchicalTransitionValidator(IEqualityComparer<TState> stateComparer, IEqualityComparer<Transition<TState, TTrigger>> transitionEqualityComparer, 
+            StateHierarchyBehaviourScheduler<TState, TTrigger> stateHierarchyBehaviourScheduler, 
+            StateHierarchy<TState, TTrigger> stateHierarchy)
         {
-            _stateComparer = stateComparer ?? throw new ArgumentNullException(nameof(stateComparer));
-            _triggerComparer = triggerComparer ?? throw new ArgumentNullException(nameof(triggerComparer));
             _stateHierarchyBehaviourScheduler = stateHierarchyBehaviourScheduler;
+            _stateHierarchy = stateHierarchy;
+            _stateComparer = stateComparer;
+            _transitionEqualityComparer = transitionEqualityComparer;
 
-            _transitionComparer = new TransitionEqualityComparer<TState, TTrigger>(_stateComparer, _triggerComparer);
-
-            _guardConditions = new Dictionary<Transition<TState, TTrigger>, List<IGuardCondition>>(_transitionComparer);
+            _guardConditions = new Dictionary<Transition<TState, TTrigger>, List<IGuardCondition>>(_transitionEqualityComparer);
         }
 
         public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
@@ -72,7 +69,8 @@ namespace Paps.StateMachines
 
         public bool IsValid(Transition<TState, TTrigger> transition)
         {
-            if (!HasValidSourceAndTargetStates(transition)) return false;
+            if(!IsValidTarget(transition))
+                return false;
 
             if (_guardConditions.ContainsKey(transition))
             {
@@ -88,21 +86,26 @@ namespace Paps.StateMachines
             return true;
         }
 
-        private bool HasValidSourceAndTargetStates(Transition<TState, TTrigger> transition)
+        private bool IsValidTarget(Transition<TState, TTrigger> transition)
         {
-            if (_stateHierarchyBehaviourScheduler
-                    .IsValidSwitchTo(transition.StateTo, out TState activeSibling) == false ||
-                AreEquals(transition.StateFrom, activeSibling) == false)
-            {
-                return false;
-            }
-            
-            return true;
+            return SourceStateIsInActiveHierarchy(transition.StateFrom) && 
+                (TargetStateIsEqualsToSource(transition.StateFrom, transition.StateTo) || 
+                TargetIsSiblingOfSource(transition.StateFrom, transition.StateTo));
         }
 
-        private bool AreEquals(TState stateId1, TState stateId2)
+        private bool SourceStateIsInActiveHierarchy(TState sourceState)
         {
-            return _stateComparer.Equals(stateId1, stateId2);
+            return _stateHierarchyBehaviourScheduler.IsInState(sourceState);
+        }
+
+        private bool TargetStateIsEqualsToSource(TState sourceState, TState targetState)
+        {
+            return _stateComparer.Equals(sourceState, targetState);
+        }
+
+        private bool TargetIsSiblingOfSource(TState sourceState, TState targetState)
+        {
+            return _stateHierarchy.AreSiblings(sourceState, targetState);
         }
     }
 

@@ -1,21 +1,23 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Paps.StateMachines
 {
-    internal class PlainTransitionCollection<TState, TTrigger> : IEnumerable<Transition<TState, TTrigger>>
+    internal class HierarchicalTransitionCollection<TState, TTrigger> : IEnumerable<Transition<TState, TTrigger>>
     {
         public int TransitionCount => _transitions.Count;
 
         private readonly HashSet<Transition<TState, TTrigger>> _transitions;
-        private readonly IPlainStateMachine<TState, TTrigger> _stateMachine;
+        private readonly IHierarchicalStateMachine<TState, TTrigger> _stateMachine;
         private readonly IEqualityComparer<TState> _stateComparer;
 
         private bool _isAddLocked;
         private bool _isRemoveLocked;
 
-        public PlainTransitionCollection(IPlainStateMachine<TState, TTrigger> stateMachine, IEqualityComparer<TState> stateComparer,
+        public HierarchicalTransitionCollection(IHierarchicalStateMachine<TState, TTrigger> stateMachine, 
+            IEqualityComparer<TState> stateComparer,
             IEqualityComparer<Transition<TState, TTrigger>> transitionEqualityComparer)
         {
             _transitions = new HashSet<Transition<TState, TTrigger>>(transitionEqualityComparer);
@@ -85,16 +87,6 @@ namespace Paps.StateMachines
             return list;
         }
 
-        public IEnumerator<Transition<TState, TTrigger>> GetEnumerator()
-        {
-            return _transitions.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
         public void Lock()
         {
             _isAddLocked = true;
@@ -105,6 +97,16 @@ namespace Paps.StateMachines
         {
             _isAddLocked = false;
             _isRemoveLocked = false;
+        }
+
+        public IEnumerator<Transition<TState, TTrigger>> GetEnumerator()
+        {
+            return _transitions.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

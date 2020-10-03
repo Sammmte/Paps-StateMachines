@@ -751,7 +751,7 @@ namespace Tests.PlainStateMachine
 
             _stateMachine.Start();
 
-            Assert.Throws<MultipleValidTransitionsFromSameStateException>(() => _stateMachine.Trigger(_trigger1));
+            Assert.Throws<MultipleValidTransitionsException>(() => _stateMachine.Trigger(_trigger1));
         }
 
         [Test]

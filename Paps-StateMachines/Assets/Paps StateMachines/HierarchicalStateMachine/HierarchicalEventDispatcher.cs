@@ -1,18 +1,16 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System;
-using System.Linq;
 
 namespace Paps.StateMachines
 {
-    internal class HierarchicalEventDispatcher<TState>
+    internal class HierarchicalEventDispatcher<TState, TTrigger>
     {
         private IEqualityComparer<TState> _stateComparer;
         private Dictionary<TState, List<IStateEventHandler>> _eventHandlers;
 
-        private StateHierarchyBehaviourScheduler<TState> _stateHierarchyBehaviourScheduler;
+        private StateHierarchyBehaviourScheduler<TState, TTrigger> _stateHierarchyBehaviourScheduler;
 
-        public HierarchicalEventDispatcher(IEqualityComparer<TState> stateComparer, StateHierarchyBehaviourScheduler<TState> stateHierarchyBehaviourScheduler)
+        public HierarchicalEventDispatcher(IEqualityComparer<TState> stateComparer, StateHierarchyBehaviourScheduler<TState, TTrigger> stateHierarchyBehaviourScheduler)
         {
             _stateComparer = stateComparer ?? throw new ArgumentNullException(nameof(stateComparer));
 
@@ -55,7 +53,7 @@ namespace Paps.StateMachines
             _eventHandlers.Remove(stateId);
         }
 
-        public bool HasEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
+        public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
         {
             if (_eventHandlers.ContainsKey(stateId))
                 return _eventHandlers[stateId].Contains(eventHandler);
@@ -75,15 +73,15 @@ namespace Paps.StateMachines
         {
             var activeHierarchyPath = _stateHierarchyBehaviourScheduler.GetActiveHierarchyPath();
 
-            for(int i = activeHierarchyPath.Count - 1; i >= 0; i--)
+            foreach(var stateIdWithObject in activeHierarchyPath)
             {
-                if(_eventHandlers.ContainsKey(activeHierarchyPath[i].Key))
+                if (_eventHandlers.ContainsKey(stateIdWithObject.Key))
                 {
-                    var eventHandlers = _eventHandlers[activeHierarchyPath[i].Key];
+                    var eventHandlers = _eventHandlers[stateIdWithObject.Key];
 
-                    for(int j = 0; j < eventHandlers.Count; j++)
+                    foreach (var eventHandler in _eventHandlers[stateIdWithObject.Key])
                     {
-                        if (eventHandlers[j].HandleEvent(ev))
+                        if (eventHandler.HandleEvent(ev))
                             return true;
                     }
                 }
