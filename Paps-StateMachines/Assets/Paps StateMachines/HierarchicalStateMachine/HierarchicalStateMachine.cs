@@ -144,6 +144,7 @@ namespace Paps.StateMachines
 
         public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
         {
+            ValidateIsNotNull(guardCondition);
             ValidateContainsTransition(transition);
 
             _transitionValidator.AddGuardConditionTo(transition, guardCondition);
@@ -373,6 +374,12 @@ namespace Paps.StateMachines
         {
             if (!ContainsTransition(transition))
                 throw new TransitionNotAddedException(this, transition.SourceState, transition.Trigger, transition.TargetState);
+        }
+
+        private void ValidateIsNotNull(IGuardCondition guardCondition)
+        {
+            if (guardCondition == null)
+                throw new ArgumentNullException(nameof(guardCondition));
         }
 
         private class StateEqualityComparer : IEqualityComparer<TState>

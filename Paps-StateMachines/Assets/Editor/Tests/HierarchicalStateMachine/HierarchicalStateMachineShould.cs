@@ -247,5 +247,208 @@ namespace Tests.HierarchicalStateMachine
         {
             Assert.Throws<StateIdNotAddedException>(() => _stateMachine.AddTransition(NewTransition(_stateId1, _trigger1, _stateId1)));
         }
+
+        [Test]
+        public void Add_Guard_Conditions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1), "Guard condition was added");
+        }
+
+        [Test]
+        public void Remove_Guard_Conditions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
+        }
+
+        [Test]
+        public void Do_Nothing_When_Asked_To_Remove_A_Guard_Condition_Of_A_Not_Added_Transition()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            Assert.DoesNotThrow(() => _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1));
+        }
+
+        [Test]
+        public void Return_Guard_Conditions_Of_A_Specified_Transition()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition2);
+
+            var guardConditions = _stateMachine.GetGuardConditionsOf(transition);
+
+            Assert.Contains(_guardCondition1, guardConditions);
+            Assert.Contains(_guardCondition2, guardConditions);
+            Assert.That(guardConditions.Length == 2, "Only contains 2 guard conditions");
+        }
+
+        [Test]
+        public void Remove_Guard_Conditions_Related_To_A_Transition_When_It_Is_Removed()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+
+            _stateMachine.RemoveTransition(transition);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
+
+            _stateMachine.AddTransition(transition);
+
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_Asked_To_Return_Guard_Conditions_Of_A_Not_Added_Transition()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            Assert.Throws<TransitionNotAddedException>(() => _stateMachine.GetGuardConditionsOf(transition));
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Tries_To_Add_A_Guard_Condition_To_A_Not_Added_Transition()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            Assert.Throws<TransitionNotAddedException>(() => _stateMachine.AddGuardConditionTo(transition, _guardCondition1));
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Tries_To_Add_A_Null_Guard_Condition()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            Assert.Throws<ArgumentNullException>(() => _stateMachine.AddGuardConditionTo(transition, null));
+        }
+
+        [Test]
+        public void Add_State_Event_Handlers()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1), "Event handler was added");
+        }
+
+        [Test]
+        public void Remove_State_Event_Handlers()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.RemoveEventHandlerFrom(_stateId1, _stateEventHandler1);
+
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1) == false, "Event handler was removed");
+        }
+
+        [Test]
+        public void Return_State_Event_Handlers_Of_A_Specified_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler2);
+
+            var stateEventHandlers = _stateMachine.GetEventHandlersOf(_stateId1);
+
+            Assert.Contains(_stateEventHandler1, stateEventHandlers);
+            Assert.Contains(_stateEventHandler2, stateEventHandlers);
+            Assert.That(stateEventHandlers.Length == 2, "Only contains 2 event handlers");
+        }
+
+        [Test]
+        public void Remove_Transitions_Guard_Conditions_And_Event_Handlers_When_Their_Related_State_Is_Removed()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddTransition(transition);
+            _stateMachine.AddGuardConditionTo(transition, _guardCondition1);
+            _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1);
+
+            _stateMachine.RemoveState(_stateId1);
+
+            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
+            Assert.That(_stateMachine.ContainsGuardConditionOn(transition, _guardCondition1) == false, "Guard condition was removed");
+            Assert.That(_stateMachine.ContainsEventHandlerOn(_stateId1, _stateEventHandler1) == false, "Event handler was removed");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_Asked_To_Return_Event_Handlers_Of_A_Not_Added_State()
+        {
+            Assert.Throws<StateIdNotAddedException>(() => _stateMachine.GetEventHandlersOf(_stateId1));
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Tries_To_Add_An_Event_Handler_To_Not_Added_State()
+        {
+            Assert.Throws<StateIdNotAddedException>(() => _stateMachine.AddEventHandlerTo(_stateId1, _stateEventHandler1));
+        }
+
+        [Test]
+        public void Let_Set_Initial_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            _stateMachine.SetInitialState(_stateId2);
+
+            Assert.AreEqual(_stateMachine.InitialState.Value, _stateId2);
+        }
+
+        [Test]
+        public void Set_Initial_State_Automatically_When_First_State_Is_Added()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.AreEqual(_stateMachine.InitialState.Value, _stateId1);
+        }
+
+        [Test]
+        public void Leave_Initial_State_With_Nothing_When_That_State_Is_Removed()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            _stateMachine.RemoveState(_stateId1);
+
+            Assert.That(_stateMachine.InitialState.IsNothing(), "Initial state is nothing");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_A_Not_Added_State_Is_Set_As_Initial_State()
+        {
+            Assert.Throws<StateIdNotAddedException>(() => _stateMachine.SetInitialState(_stateId1));
+        }
     }
 }

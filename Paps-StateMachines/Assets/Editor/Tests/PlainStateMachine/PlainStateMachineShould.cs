@@ -278,6 +278,14 @@ namespace Tests.PlainStateMachine
         }
 
         [Test]
+        public void Do_Nothing_When_Asked_To_Remove_A_Guard_Condition_Of_A_Not_Added_Transition()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            Assert.DoesNotThrow(() => _stateMachine.RemoveGuardConditionFrom(transition, _guardCondition1));
+        }
+
+        [Test]
         public void Return_Guard_Conditions_Of_A_Specified_Transition()
         {
             _stateMachine.AddState(_stateId1, _stateObject1);
@@ -330,6 +338,14 @@ namespace Tests.PlainStateMachine
             var transition = NewTransition(_stateId1, _trigger1, _stateId1);
 
             Assert.Throws<TransitionNotAddedException>(() => _stateMachine.AddGuardConditionTo(transition, _guardCondition1));
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Tries_To_Add_A_Null_Guard_Condition()
+        {
+            var transition = NewTransition(_stateId1, _trigger1, _stateId1);
+
+            Assert.Throws<ArgumentNullException>(() => _stateMachine.AddGuardConditionTo(transition, null));
         }
 
         [Test]
