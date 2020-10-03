@@ -8,7 +8,7 @@ namespace Paps.StateMachines
         public object Element { get; }
         public Type ElementType { get; }
 
-        public UnableToAddStateMachineElementException(object stateMachine, object element)
+        public UnableToAddStateMachineElementException(object stateMachine, object element, string message = "") : base(message)
         {
             StateMachine = stateMachine;
             Element = element;
