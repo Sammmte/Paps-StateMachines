@@ -257,8 +257,8 @@ namespace Paps.StateMachines
 
         public void AddTransition(Transition<TState, TTrigger> transition)
         {
-            ValidateContainsState(transition.StateFrom);
-            ValidateContainsState(transition.StateTo);
+            ValidateContainsState(transition.SourceState);
+            ValidateContainsState(transition.TargetState);
 
             _transitions.AddTransition(transition);
         }
@@ -315,7 +315,7 @@ namespace Paps.StateMachines
         private void ValidateContainsTransition(Transition<TState, TTrigger> transition)
         {
             if (!ContainsTransition(transition))
-                throw new TransitionNotAddedException(this, transition.StateFrom, transition.Trigger, transition.StateTo);
+                throw new TransitionNotAddedException(this, transition.SourceState, transition.Trigger, transition.TargetState);
         }
 
         private void ValidateCanAddState(TState stateId, IState state)

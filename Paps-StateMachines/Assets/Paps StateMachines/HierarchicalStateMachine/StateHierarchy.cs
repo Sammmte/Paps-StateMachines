@@ -140,7 +140,7 @@ namespace Paps.StateMachines
 
                 if(ChildCountOf(parentId) == 1)
                 {
-                    SetInitialStateTo(parentId, childId);
+                    SetInitialStateOf(parentId, childId);
                 }
             }
         }
@@ -258,7 +258,7 @@ namespace Paps.StateMachines
             return _states[stateId].StateObject;
         }
 
-        public void SetInitialStateTo(TState parentId, TState initialChildId)
+        public void SetInitialStateOf(TState parentId, TState initialChildId)
         {
             ValidateContainsId(parentId);
             ValidateContainsId(initialChildId);

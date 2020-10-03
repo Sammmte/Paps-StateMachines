@@ -17,7 +17,7 @@
 
         TState GetParentOf(TState childId);
 
-        void SetInitialStateTo(TState parentState, TState initialState);
+        void SetInitialStateOf(TState parentState, TState initialState);
         TState GetInitialStateOf(TState parentState);
 
         TState[] GetRoots();

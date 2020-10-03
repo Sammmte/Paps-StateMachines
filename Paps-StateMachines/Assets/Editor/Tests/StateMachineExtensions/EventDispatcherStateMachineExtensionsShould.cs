@@ -17,8 +17,8 @@ namespace Tests.StateMachineExtensions
 
         protected abstract Transition<TState, TTrigger> NewTransition();
 
-        protected abstract Transition<TState, TTrigger> NewTransition(TState stateFrom, TTrigger trigger, TState stateTo);
-        protected abstract Transition<T, U> NewTransition<T, U>(T stateFrom, U trigger, T stateTo);
+        protected abstract Transition<TState, TTrigger> NewTransition(TState sourceTarget, TTrigger trigger, TState targetState);
+        protected abstract Transition<T, U> NewTransition<T, U>(T sourceTarget, U trigger, T targetState);
 
         [Test]
         public void Add_Multiple_Event_Handlers()

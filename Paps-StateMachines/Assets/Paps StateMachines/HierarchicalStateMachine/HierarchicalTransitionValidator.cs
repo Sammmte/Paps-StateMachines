@@ -88,9 +88,9 @@ namespace Paps.StateMachines
 
         private bool IsValidTarget(Transition<TState, TTrigger> transition)
         {
-            return SourceStateIsInActiveHierarchy(transition.StateFrom) && 
-                (TargetStateIsEqualsToSource(transition.StateFrom, transition.StateTo) || 
-                TargetIsSiblingOfSource(transition.StateFrom, transition.StateTo));
+            return SourceStateIsInActiveHierarchy(transition.SourceState) && 
+                (TargetStateIsEqualsToSource(transition.SourceState, transition.TargetState) || 
+                TargetIsSiblingOfSource(transition.SourceState, transition.TargetState));
         }
 
         private bool SourceStateIsInActiveHierarchy(TState sourceState)

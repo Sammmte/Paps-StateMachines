@@ -1,18 +1,16 @@
-﻿using System;
-
-namespace Paps.StateMachines
+﻿namespace Paps.StateMachines
 {
     public struct Transition<TState, TTrigger>
     {
-        public TState StateFrom { get; private set; }
+        public TState SourceState { get; private set; }
         public TTrigger Trigger { get; private set; }
-        public TState StateTo { get; private set; }
+        public TState TargetState { get; private set; }
 
-        public Transition(TState stateFrom, TTrigger trigger, TState stateTo)
+        public Transition(TState sourceState, TTrigger trigger, TState targetState)
         {
-            StateFrom = stateFrom;
+            SourceState = sourceState;
             Trigger = trigger;
-            StateTo = stateTo;
+            TargetState = targetState;
         }
     }
 }

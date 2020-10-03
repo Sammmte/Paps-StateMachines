@@ -35,8 +35,8 @@ namespace Tests.PlainStateMachine
 
         protected abstract Transition<TState, TTrigger> NewTransition();
 
-        protected abstract Transition<TState, TTrigger> NewTransition(TState stateFrom, TTrigger trigger, TState stateTo);
-        protected abstract Transition<T, U> NewTransition<T, U>(T stateFrom, U trigger, T stateTo);
+        protected abstract Transition<TState, TTrigger> NewTransition(TState sourceTarget, TTrigger trigger, TState targetState);
+        protected abstract Transition<T, U> NewTransition<T, U>(T sourceTarget, U trigger, T targetState);
 
         protected IPlainStateMachine<TState, TTrigger> _stateMachine;
         protected TState _stateId1, _stateId2, _stateId3, _stateId4, _stateId5;

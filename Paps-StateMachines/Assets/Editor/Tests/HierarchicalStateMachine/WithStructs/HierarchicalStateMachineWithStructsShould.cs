@@ -27,14 +27,14 @@ namespace Tests.HierarchicalStateMachine.WithStructs
             return new Transition<int, int>(NewStateId(), NewTrigger(), NewStateId());
         }
 
-        protected override Transition<int, int> NewTransition(int stateFrom, int trigger, int stateTo)
+        protected override Transition<int, int> NewTransition(int sourceTarget, int trigger, int targetState)
         {
-            return NewTransition<int, int>(stateFrom, trigger, stateTo);
+            return NewTransition<int, int>(sourceTarget, trigger, targetState);
         }
 
-        protected override Transition<T, U> NewTransition<T, U>(T stateFrom, U trigger, T stateTo)
+        protected override Transition<T, U> NewTransition<T, U>(T sourceTarget, U trigger, T targetState)
         {
-            return new Transition<T, U>(stateFrom, trigger, stateTo);
+            return new Transition<T, U>(sourceTarget, trigger, targetState);
         }
 
         protected override int NewTrigger()

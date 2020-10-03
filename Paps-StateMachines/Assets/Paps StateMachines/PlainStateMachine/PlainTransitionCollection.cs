@@ -75,8 +75,8 @@ namespace Paps.StateMachines
 
             foreach (var transition in _transitions)
             {
-                if (_stateComparer.Equals(transition.StateFrom, stateId) ||
-                    _stateComparer.Equals(transition.StateTo, stateId))
+                if (_stateComparer.Equals(transition.SourceState, stateId) ||
+                    _stateComparer.Equals(transition.TargetState, stateId))
                 {
                     list.Add(transition);
                 }

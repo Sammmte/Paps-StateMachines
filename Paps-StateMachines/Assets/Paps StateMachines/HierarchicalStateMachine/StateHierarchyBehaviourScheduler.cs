@@ -196,8 +196,8 @@ namespace Paps.StateMachines
                     {
                         hasOneValid = true;
                         validTransition = transition;
-                        sourceState = transition.StateFrom;
-                        targetState = transition.StateTo;
+                        sourceState = transition.SourceState;
+                        targetState = transition.TargetState;
                     }
 
                 }

@@ -34,8 +34,8 @@ namespace Tests.HierarchicalStateMachine
 
         protected abstract Transition<TState, TTrigger> NewTransition();
 
-        protected abstract Transition<TState, TTrigger> NewTransition(TState stateFrom, TTrigger trigger, TState stateTo);
-        protected abstract Transition<T, U> NewTransition<T, U>(T stateFrom, U trigger, T stateTo);
+        protected abstract Transition<TState, TTrigger> NewTransition(TState sourceState, TTrigger trigger, TState targetState);
+        protected abstract Transition<T, U> NewTransition<T, U>(T sourceState, U trigger, T targetState);
 
         protected IHierarchicalStateMachine<TState, TTrigger> _stateMachine;
         protected TState _stateId1, _stateId2, _stateId3, _stateId4, _stateId5;

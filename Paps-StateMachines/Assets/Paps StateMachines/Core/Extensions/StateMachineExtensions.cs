@@ -7,10 +7,10 @@ namespace Paps.StateMachines.Extensions
 
     public static partial class StateMachineExtensions
     {
-        public static void AddTransition<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateFrom,
-            TTrigger trigger, TState stateTo)
+        public static void AddTransition<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState sourceTarget,
+            TTrigger trigger, TState targetState)
         {
-            fsm.AddTransition(new Transition<TState, TTrigger>(stateFrom, trigger, stateTo));
+            fsm.AddTransition(new Transition<TState, TTrigger>(sourceTarget, trigger, targetState));
         }
 
         public static bool ContainsStateByReference<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, IState stateRef)
@@ -143,25 +143,25 @@ namespace Paps.StateMachines.Extensions
             }
         }
 
-        public static void FromAny<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TTrigger trigger, TState stateTo)
+        public static void FromAny<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TTrigger trigger, TState targetState)
         {
             TState[] states = fsm.GetStates();
 
             foreach (TState state in states)
             {
-                fsm.AddTransition(new Transition<TState, TTrigger>(state, trigger, stateTo));
+                fsm.AddTransition(new Transition<TState, TTrigger>(state, trigger, targetState));
             }
         }
 
-        public static void FromAnyExceptTarget<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TTrigger trigger, TState stateTo)
+        public static void FromAnyExceptTarget<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TTrigger trigger, TState targetState)
         {
             TState[] states = fsm.GetStates();
 
             foreach (TState stateId in states)
             {
-                if (stateId.Equals(stateTo) == false)
+                if (stateId.Equals(targetState) == false)
                 {
-                    fsm.AddTransition(new Transition<TState, TTrigger>(stateId, trigger, stateTo));
+                    fsm.AddTransition(new Transition<TState, TTrigger>(stateId, trigger, targetState));
                 }
             }
         }
@@ -193,7 +193,7 @@ namespace Paps.StateMachines.Extensions
             return transitionsList.ToArray();
         }
 
-        public static Transition<TState, TTrigger>[] GetTransitionsWithStateFrom<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateFrom)
+        public static Transition<TState, TTrigger>[] GetTransitionsWithSourceState<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState sourceTarget)
         {
             List<Transition<TState, TTrigger>> transitionsList = null;
 
@@ -201,7 +201,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (var transition in transitions)
             {
-                if (transition.StateFrom.Equals(stateFrom))
+                if (transition.SourceState.Equals(sourceTarget))
                 {
                     if (transitionsList == null)
                     {
@@ -220,7 +220,7 @@ namespace Paps.StateMachines.Extensions
             return transitionsList.ToArray();
         }
 
-        public static Transition<TState, TTrigger>[] GetTransitionsWithStateTo<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateTo)
+        public static Transition<TState, TTrigger>[] GetTransitionsWithTargetState<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState targetState)
         {
             List<Transition<TState, TTrigger>> transitionsList = null;
 
@@ -228,7 +228,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (var transition in transitions)
             {
-                if (transition.StateTo.Equals(stateTo))
+                if (transition.TargetState.Equals(targetState))
                 {
                     if (transitionsList == null)
                     {
@@ -247,13 +247,13 @@ namespace Paps.StateMachines.Extensions
             return transitionsList.ToArray();
         }
 
-        public static bool ContainsTransitionWithStateTo<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateTo)
+        public static bool ContainsTransitionWithTargetState<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState targetState)
         {
             Transition<TState, TTrigger>[] transitions = fsm.GetTransitions();
 
             foreach (var transition in transitions)
             {
-                if (transition.StateTo.Equals(stateTo))
+                if (transition.TargetState.Equals(targetState))
                 {
                     return true;
                 }
@@ -262,13 +262,13 @@ namespace Paps.StateMachines.Extensions
             return false;
         }
 
-        public static bool ContainsTransitionWithStateFrom<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState stateFrom)
+        public static bool ContainsTransitionWithSourceState<TState, TTrigger>(this IStateMachine<TState, TTrigger> fsm, TState sourceTarget)
         {
             Transition<TState, TTrigger>[] transitions = fsm.GetTransitions();
 
             foreach (var transition in transitions)
             {
-                if (transition.StateFrom.Equals(stateFrom))
+                if (transition.SourceState.Equals(sourceTarget))
                 {
                     return true;
                 }
@@ -300,7 +300,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (var transition in transitions)
             {
-                if (transition.StateFrom.Equals(stateId) || transition.StateTo.Equals(stateId))
+                if (transition.SourceState.Equals(stateId) || transition.TargetState.Equals(stateId))
                 {
                     if (transitionsList == null)
                     {
@@ -325,7 +325,7 @@ namespace Paps.StateMachines.Extensions
 
             foreach (var transition in transitions)
             {
-                if (transition.StateFrom.Equals(stateId) || transition.StateTo.Equals(stateId))
+                if (transition.SourceState.Equals(stateId) || transition.TargetState.Equals(stateId))
                 {
                     return true;
                 }

@@ -56,8 +56,8 @@ namespace Tests.StateMachineExtensions
 
         protected abstract Transition<TState, TTrigger> NewTransition();
 
-        protected abstract Transition<TState, TTrigger> NewTransition(TState stateFrom, TTrigger trigger, TState stateTo);
-        protected abstract Transition<T, U> NewTransition<T, U>(T stateFrom, U trigger, T stateTo);
+        protected abstract Transition<TState, TTrigger> NewTransition(TState sourceTarget, TTrigger trigger, TState targetState);
+        protected abstract Transition<T, U> NewTransition<T, U>(T sourceTarget, U trigger, T targetState);
 
         [Test]
         public void Get_State_Of_Specific_Type()
@@ -270,10 +270,10 @@ namespace Tests.StateMachineExtensions
             fsm.AddTransition(NewTransition(stateId1, trigger2, stateId1));
             fsm.AddTransition(NewTransition(stateId2, trigger2, stateId1));
 
-            var transitions = fsm.GetTransitionsWithStateFrom(stateId1);
+            var transitions = fsm.GetTransitionsWithSourceState(stateId1);
 
-            Assert.IsTrue(transitions.Any(t => t.StateFrom.Equals(stateId1)));
-            Assert.IsFalse(transitions.Any(t => t.StateFrom.Equals(stateId2)));
+            Assert.IsTrue(transitions.Any(t => t.SourceState.Equals(stateId1)));
+            Assert.IsFalse(transitions.Any(t => t.SourceState.Equals(stateId2)));
         }
 
         [Test]
@@ -296,10 +296,10 @@ namespace Tests.StateMachineExtensions
             fsm.AddTransition(NewTransition(stateId1, trigger2, stateId1));
             fsm.AddTransition(NewTransition(stateId1, trigger2, stateId2));
 
-            var transitions = fsm.GetTransitionsWithStateTo(stateId1);
+            var transitions = fsm.GetTransitionsWithTargetState(stateId1);
 
-            Assert.IsTrue(transitions.Any(t => t.StateTo.Equals(stateId1)));
-            Assert.IsFalse(transitions.Any(t => t.StateTo.Equals(stateId2)));
+            Assert.IsTrue(transitions.Any(t => t.TargetState.Equals(stateId1)));
+            Assert.IsFalse(transitions.Any(t => t.TargetState.Equals(stateId2)));
         }
 
         [Test]
@@ -325,8 +325,8 @@ namespace Tests.StateMachineExtensions
 
             var transitions = fsm.GetTransitionsRelatedTo(stateId1);
 
-            Assert.IsTrue(transitions.Any(t => t.StateTo.Equals(stateId1) || t.StateFrom.Equals(stateId1)));
-            Assert.IsFalse(transitions.Any(t => t.StateTo.Equals(stateId2) || t.StateFrom.Equals(stateId3)));
+            Assert.IsTrue(transitions.Any(t => t.TargetState.Equals(stateId1) || t.SourceState.Equals(stateId1)));
+            Assert.IsFalse(transitions.Any(t => t.TargetState.Equals(stateId2) || t.SourceState.Equals(stateId3)));
         }
 
         [Test]
@@ -350,8 +350,8 @@ namespace Tests.StateMachineExtensions
             fsm.AddTransition(NewTransition(stateId1, trigger2, stateId1));
             fsm.AddTransition(NewTransition(stateId2, trigger2, stateId1));
 
-            Assert.IsTrue(fsm.ContainsTransitionWithStateFrom(stateId1));
-            Assert.IsFalse(fsm.ContainsTransitionWithStateFrom(stateId3));
+            Assert.IsTrue(fsm.ContainsTransitionWithSourceState(stateId1));
+            Assert.IsFalse(fsm.ContainsTransitionWithSourceState(stateId3));
         }
 
         [Test]
@@ -375,8 +375,8 @@ namespace Tests.StateMachineExtensions
             fsm.AddTransition(NewTransition(stateId1, trigger2, stateId1));
             fsm.AddTransition(NewTransition(stateId2, trigger2, stateId1));
 
-            Assert.IsTrue(fsm.ContainsTransitionWithStateTo(stateId1));
-            Assert.IsFalse(fsm.ContainsTransitionWithStateTo(stateId3));
+            Assert.IsTrue(fsm.ContainsTransitionWithTargetState(stateId1));
+            Assert.IsFalse(fsm.ContainsTransitionWithTargetState(stateId3));
         }
 
         [Test]

@@ -15,14 +15,14 @@ namespace Paps.StateMachines
 
         public bool Equals(Transition<TState, TTrigger> x, Transition<TState, TTrigger> y)
         {
-            return _stateComparer.Equals(x.StateFrom, y.StateFrom) &&
+            return _stateComparer.Equals(x.SourceState, y.SourceState) &&
                 _triggerComparer.Equals(x.Trigger, y.Trigger) &&
-                _stateComparer.Equals(x.StateTo, y.StateTo);
+                _stateComparer.Equals(x.TargetState, y.TargetState);
         }
 
         public int GetHashCode(Transition<TState, TTrigger> obj)
         {
-            return (obj.StateFrom, obj.Trigger, obj.StateTo).GetHashCode();
+            return (obj.SourceState, obj.Trigger, obj.TargetState).GetHashCode();
         }
     }
 }

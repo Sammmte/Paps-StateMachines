@@ -26,14 +26,14 @@ namespace Tests.HierarchicalStateMachine.WithClasses
             return new Transition<string, string>(NewStateId(), NewTrigger(), NewStateId());
         }
 
-        protected override Transition<string, string> NewTransition(string stateFrom, string trigger, string stateTo)
+        protected override Transition<string, string> NewTransition(string sourceTarget, string trigger, string targetState)
         {
-            return NewTransition<string, string>(stateFrom, trigger, stateTo);
+            return NewTransition<string, string>(sourceTarget, trigger, targetState);
         }
 
-        protected override Transition<T, U> NewTransition<T, U>(T stateFrom, U trigger, T stateTo)
+        protected override Transition<T, U> NewTransition<T, U>(T sourceTarget, U trigger, T targetState)
         {
-            return new Transition<T, U>(stateFrom, trigger, stateTo);
+            return new Transition<T, U>(sourceTarget, trigger, targetState);
         }
 
         protected override string NewTrigger()

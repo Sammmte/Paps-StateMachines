@@ -248,9 +248,9 @@ namespace Paps.StateMachines
             _stateHierarchy.SetInitialState(stateId);
         }
 
-        public void SetInitialStateTo(TState parentState, TState initialState)
+        public void SetInitialStateOf(TState parentState, TState initialState)
         {
-            _stateHierarchy.SetInitialStateTo(parentState, initialState);
+            _stateHierarchy.SetInitialStateOf(parentState, initialState);
         }
 
         public void Start(Action callback = null)

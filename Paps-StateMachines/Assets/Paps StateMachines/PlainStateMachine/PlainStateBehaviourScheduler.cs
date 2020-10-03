@@ -149,12 +149,12 @@ namespace Paps.StateMachines
             _transitions.Lock();
             _transitionValidator.Lock();
 
-            if (TryGetStateTo(trigger, out TState stateTo))
+            if (TryGetTargetState(trigger, out TState targetState))
             {
                 _states.Unlock();
                 _transitions.Unlock();
                 _transitionValidator.Unlock();
-                SwitchTo(stateTo, trigger);
+                SwitchTo(targetState, trigger);
 
                 return true;
             }
@@ -166,19 +166,19 @@ namespace Paps.StateMachines
             return false;
         }
 
-        private void NotifyBeforeStateChangesEvent(TState stateFrom, TTrigger trigger, TState stateTo)
+        private void NotifyBeforeStateChangesEvent(TState sourceTarget, TTrigger trigger, TState targetState)
         {
-            OnBeforeStateChanges?.Invoke(stateFrom, trigger, stateTo);
+            OnBeforeStateChanges?.Invoke(sourceTarget, trigger, targetState);
         }
 
-        private void NotifyStateChangedEvent(TState stateFrom, TTrigger trigger, TState stateTo)
+        private void NotifyStateChangedEvent(TState sourceTarget, TTrigger trigger, TState targetState)
         {
-            OnStateChanged?.Invoke(stateFrom, trigger, stateTo);
+            OnStateChanged?.Invoke(sourceTarget, trigger, targetState);
         }
 
-        private bool TryGetStateTo(TTrigger trigger, out TState stateTo)
+        private bool TryGetTargetState(TTrigger trigger, out TState targetState)
         {
-            stateTo = default;
+            targetState = default;
 
             Transition<TState, TTrigger> validTransition = default;
             bool modifiedFlag = false;
@@ -186,7 +186,7 @@ namespace Paps.StateMachines
 
             foreach (var transition in _transitions)
             {
-                if (_stateComparer.Equals(transition.StateFrom, CurrentState.Value)
+                if (_stateComparer.Equals(transition.SourceState, CurrentState.Value)
                     && _triggerComparer.Equals(transition.Trigger, trigger)
                     && _transitionValidator.IsValid(transition))
                 {
@@ -197,7 +197,7 @@ namespace Paps.StateMachines
                     }
 
                     validTransition = transition;
-                    stateTo = transition.StateTo;
+                    targetState = transition.TargetState;
 
                     modifiedFlag = true;
                     multipleValidGuardsFlag = true;
