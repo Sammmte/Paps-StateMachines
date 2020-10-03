@@ -68,7 +68,7 @@ namespace Paps.StateMachines
                 _states.Remove(stateId);
                 _roots.Remove(stateId);
 
-                if(StateCount == 0)
+                if(InitialState.HasValue && AreEquals(InitialState.Value, stateId))
                 {
                     InitialState = Maybe<TState>.Nothing;
                 }
@@ -150,13 +150,14 @@ namespace Paps.StateMachines
             var childNode = NodeOf(childId);
 
             if (HasParent(childNode)) 
-                throw new UnableToAddStateMachineElementException(_stateMachine, childId, "State with id " + childId.ToString() + " has parent with id " + childNode.Parent.StateId.ToString());
+                throw new UnableToAddChildException(_stateMachine, GetParentOf(childId), childId, 
+                    "State with id " + childId.ToString() + " has parent with id " + childNode.Parent.StateId.ToString());
         }
 
         private void ValidateParentAndChildAreNotTheSame(TState parentId, TState childId)
         {
             if (AreEquals(parentId, childId)) 
-                throw new UnableToAddStateMachineElementException(_stateMachine, childId, "Cannot set substate relation with parent and child with same id");
+                throw new UnableToAddChildException(_stateMachine, parentId, childId, "Cannot set substate relation with parent and child with same id");
         }
 
         private void ValidateChildIsNotParentOfParent(TState parentId, TState childId)
@@ -164,7 +165,7 @@ namespace Paps.StateMachines
             var parentNode = NodeOf(parentId);
 
             if (HasParent(parentNode) && AreEquals(parentNode.Parent.StateId, childId))
-                throw new UnableToAddStateMachineElementException(_stateMachine, childId, "State with id " + parentId.ToString() + " cannot be parent of " + childId.ToString() + " because the last is parent of the first");
+                throw new UnableToAddChildException(_stateMachine, parentId, childId, "State with id " + parentId.ToString() + " cannot be parent of " + childId.ToString() + " because the last is parent of the first");
         }
 
         public bool RemoveChildFromParent(TState childId)

@@ -80,7 +80,7 @@ namespace Paps.StateMachines
             if (_eventHandlers.ContainsKey(stateId))
                 return _eventHandlers[stateId].ToArray();
             else
-                return null;
+                return new IStateEventHandler[0];
         }
 
         public void LockEventHandlersOf(TState stateId)

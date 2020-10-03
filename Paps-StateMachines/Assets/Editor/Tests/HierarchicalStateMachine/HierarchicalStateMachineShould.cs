@@ -1,5 +1,6 @@
 ﻿using NSubstitute;
 using NUnit.Framework;
+using Paps.Maybe;
 using Paps.StateMachines;
 using System;
 
@@ -44,9 +45,10 @@ namespace Tests.HierarchicalStateMachine
         protected IGuardCondition _guardCondition1, _guardCondition2, _guardCondition3, _guardCondition4, _guardCondition5;
         protected IStateEventHandler _stateEventHandler1, _stateEventHandler2, _stateEventHandler3, _stateEventHandler4, _stateEventHandler5;
         protected IEvent _event1;
-        protected HierarchyPathChanged<TTrigger> _onBeforeStateChangesSubscriptor1, _onBeforeStateChangesSubscriptor2,
-            _onBeforeStateChangesSubscriptor3;
-        protected HierarchyPathChanged<TTrigger> _onStateChangedSubscriptor1, _onStateChangedSubscriptor2, _onStateChangedSubscriptor3;
+        protected HierarchyPathChanged<TTrigger> _onBeforeHierarchyPathChangesSubscriptor1, _onBeforeHierarchyPathChangesSubscriptor2,
+            _onBeforeHierarchyPathChangesSubscriptor3;
+        protected HierarchyPathChanged<TTrigger> _onHierarchyPathChangedSubscriptor1, _onHierarchyPathChangedSubscriptor2,
+            _onHierarchyPathChangedSubscriptor3;
         protected Action _startCallback;
         protected Action _stopCallback;
         protected Action _updateCallback;
@@ -90,19 +92,160 @@ namespace Tests.HierarchicalStateMachine
 
             _event1 = Substitute.For<IEvent>();
 
-            _onBeforeStateChangesSubscriptor1 = Substitute.For<HierarchyPathChanged<TTrigger>>();
-            _onBeforeStateChangesSubscriptor2 = Substitute.For<HierarchyPathChanged<TTrigger>>();
-            _onBeforeStateChangesSubscriptor3 = Substitute.For<HierarchyPathChanged<TTrigger>>();
+            _onBeforeHierarchyPathChangesSubscriptor1 = Substitute.For<HierarchyPathChanged<TTrigger>>();
+            _onBeforeHierarchyPathChangesSubscriptor2 = Substitute.For<HierarchyPathChanged<TTrigger>>();
+            _onBeforeHierarchyPathChangesSubscriptor3 = Substitute.For<HierarchyPathChanged<TTrigger>>();
 
-            _onStateChangedSubscriptor1 = Substitute.For<HierarchyPathChanged<TTrigger>>();
-            _onStateChangedSubscriptor2 = Substitute.For<HierarchyPathChanged<TTrigger>>();
-            _onStateChangedSubscriptor3 = Substitute.For<HierarchyPathChanged<TTrigger>>();
+            _onHierarchyPathChangedSubscriptor1 = Substitute.For<HierarchyPathChanged<TTrigger>>();
+            _onHierarchyPathChangedSubscriptor2 = Substitute.For<HierarchyPathChanged<TTrigger>>();
+            _onHierarchyPathChangedSubscriptor3 = Substitute.For<HierarchyPathChanged<TTrigger>>();
 
             _startCallback = Substitute.For<Action>();
             _stopCallback = Substitute.For<Action>();
             _updateCallback = Substitute.For<Action>();
             _triggerCallback = Substitute.For<Action<bool>>();
             _sendEventCallback = Substitute.For<Action<bool>>();
+        }
+
+        [Test]
+        public void Add_States()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.That(_stateMachine.ContainsState(_stateId1), "Contains state 1");
+        }
+
+        [Test]
+        public void Remove_States()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            _stateMachine.RemoveState(_stateId1);
+
+            Assert.That(_stateMachine.ContainsState(_stateId1) == false, "State 1 was removed");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Adds_An_Existing_State()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.Throws<StateIdAlreadyAddedException>(() => _stateMachine.AddState(_stateId1, _stateObject1));
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Adds_A_Null_State_Object()
+        {
+            Assert.Throws<ArgumentNullException>(() => _stateMachine.AddState(_stateId1, null));
+        }
+
+        [Test]
+        public void Return_State_Count()
+        {
+            Assert.That(_stateMachine.StateCount == 0, "State count starts at zero");
+
+            _stateMachine.AddState(_stateId1, _stateObject1);
+
+            Assert.That(_stateMachine.StateCount == 1, "State count has been increased");
+
+            _stateMachine.RemoveState(_stateId1);
+
+            Assert.That(_stateMachine.StateCount == 0, "State count has been decreased");
+        }
+
+        [Test]
+        public void Return_State_Object_By_Id()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            Assert.AreEqual(_stateObject1, _stateMachine.GetStateObjectById(_stateId1));
+            Assert.AreEqual(_stateObject2, _stateMachine.GetStateObjectById(_stateId2));
+        }
+
+        [Test]
+        public void Return_States()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var states = _stateMachine.GetStates();
+
+            Assert.Contains(_stateId1, states);
+            Assert.Contains(_stateId2, states);
+            Assert.That(states.Length == 2, "Contains only 2 states");
+        }
+
+        [Test]
+        public void Add_Transitions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            Assert.That(_stateMachine.ContainsTransition(transition), "Contains transition");
+        }
+
+        [Test]
+        public void Remove_Transitions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            _stateMachine.RemoveTransition(transition);
+
+            Assert.That(_stateMachine.ContainsTransition(transition) == false, "Transition was removed");
+        }
+
+        [Test]
+        public void Return_Transition_Count()
+        {
+            Assert.That(_stateMachine.TransitionCount == 0, "Transition count starts at zero");
+
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition = NewTransition(_stateId1, _trigger1, _stateId2);
+
+            _stateMachine.AddTransition(transition);
+
+            Assert.That(_stateMachine.TransitionCount == 1, "Transition count has been increased");
+
+            _stateMachine.RemoveTransition(transition);
+
+            Assert.That(_stateMachine.TransitionCount == 0, "Transition count has been decreased");
+        }
+
+        [Test]
+        public void Return_Transitions()
+        {
+            _stateMachine.AddState(_stateId1, _stateObject1);
+            _stateMachine.AddState(_stateId2, _stateObject2);
+
+            var transition1 = NewTransition(_stateId1, _trigger1, _stateId2);
+            var transition2 = NewTransition(_stateId2, _trigger1, _stateId1);
+
+            _stateMachine.AddTransition(transition1);
+            _stateMachine.AddTransition(transition2);
+
+            var transitions = _stateMachine.GetTransitions();
+
+            Assert.Contains(transition1, transitions);
+            Assert.Contains(transition2, transitions);
+            Assert.That(transitions.Length == 2, "Contains only 2 transitions");
+        }
+
+        [Test]
+        public void Throw_An_Exception_When_User_Adds_A_Transition_With_A_Not_Added_State()
+        {
+            Assert.Throws<StateIdNotAddedException>(() => _stateMachine.AddTransition(NewTransition(_stateId1, _trigger1, _stateId1)));
         }
     }
 }

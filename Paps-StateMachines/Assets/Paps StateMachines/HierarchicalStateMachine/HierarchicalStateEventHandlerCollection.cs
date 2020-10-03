@@ -1,428 +1,102 @@
-﻿using Paps.Maybe;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Paps.StateMachines
 {
-
-    public class HierarchicalStateMachine<TState, TTrigger> : IHierarchicalStateMachine<TState, TTrigger>, IStartableStateMachine<TState, TTrigger>, IUpdatableStateMachine<TState, TTrigger>
+    internal class HierarchicalStateEventHandlerCollection<TState, TTrigger>
     {
-        public int StateCount => _stateHierarchy.StateCount;
+        private readonly IHierarchicalStateMachine<TState, TTrigger> _stateMachine;
+        private readonly IEqualityComparer<TState> _stateComparer;
+        private readonly Dictionary<TState, List<IStateEventHandler>> _eventHandlers;
+        private readonly List<TState> _lockedStates = new List<TState>();
 
-        public int TransitionCount => _transitions.TransitionCount;
-
-        public Maybe<TState> InitialState => _stateHierarchy.InitialState;
-
-        public bool IsRunning => _stateHierarchyBehaviourScheduler.IsRunning;
-
-        public event HierarchyPathChanged<TTrigger> OnBeforeActiveHierarchyPathChanges
+        public HierarchicalStateEventHandlerCollection(IHierarchicalStateMachine<TState, TTrigger> stateMachine, IEqualityComparer<TState> stateComparer)
         {
-            add
-            {
-                _stateHierarchyBehaviourScheduler.OnBeforeActiveHierarchyPathChanges += value;
-            }
-
-            remove
-            {
-                _stateHierarchyBehaviourScheduler.OnBeforeActiveHierarchyPathChanges -= value;
-            }
-        }
-        public event HierarchyPathChanged<TTrigger> OnActiveHierarchyPathChanged
-        {
-            add
-            {
-                _stateHierarchyBehaviourScheduler.OnActiveHierarchyPathChanged += value;
-            }
-
-            remove
-            {
-                _stateHierarchyBehaviourScheduler.OnActiveHierarchyPathChanged -= value;
-            }
-        }
-
-        private StateHierarchy<TState, TTrigger> _stateHierarchy;
-        private StateHierarchyBehaviourScheduler<TState, TTrigger> _stateHierarchyBehaviourScheduler;
-        private HierarchicalTransitionValidator<TState, TTrigger> _transitionValidator;
-        private HierarchicalTransitionCollection<TState, TTrigger> _transitions;
-        private HierarchicalEventDispatcher<TState, TTrigger> _eventDispatcher;
-        private HierarchicalStateEventHandlerCollection<TState, TTrigger> _eventHandlers;
-
-        private StateEqualityComparer _stateComparer;
-        private TriggerEqualityComparer _triggerComparer;
-        private IEqualityComparer<Transition<TState, TTrigger>> _transitionComparer;
-
-        private Queue<Action> _actionQueue = new Queue<Action>();
-        private bool _processingActions;
-
-        public HierarchicalStateMachine(IEqualityComparer<TState> stateComparer, IEqualityComparer<TTrigger> triggerComparer)
-        {
-            if (stateComparer == null) throw new ArgumentNullException(nameof(stateComparer));
-            if (triggerComparer == null) throw new ArgumentNullException(nameof(triggerComparer));
-
-            _stateComparer = new StateEqualityComparer(stateComparer);
-            _triggerComparer = new TriggerEqualityComparer(triggerComparer);
-
-            _transitionComparer = new TransitionEqualityComparer<TState, TTrigger>(_stateComparer, _triggerComparer);
-
-            _stateHierarchy = new StateHierarchy<TState, TTrigger>(this, _stateComparer);
-            _stateHierarchyBehaviourScheduler = new StateHierarchyBehaviourScheduler<TState, TTrigger>(this, _stateHierarchy, _transitions, _transitionValidator, _stateComparer, _triggerComparer);
-            _transitionValidator = new HierarchicalTransitionValidator<TState, TTrigger>(_stateComparer, _transitionComparer, _stateHierarchyBehaviourScheduler, _stateHierarchy);
-            _transitions = new HierarchicalTransitionCollection<TState, TTrigger>(this, _stateComparer, _transitionComparer);
-            _eventHandlers = new HierarchicalStateEventHandlerCollection<TState, TTrigger>(this, _stateComparer);
-            _eventDispatcher = new HierarchicalEventDispatcher<TState, TTrigger>(_stateComparer, _eventHandlers, _stateHierarchyBehaviourScheduler);
-            
-        }
-
-        public HierarchicalStateMachine() : this(EqualityComparer<TState>.Default, EqualityComparer<TTrigger>.Default)
-        {
-
-        }
-
-        public void SetStateComparer(IEqualityComparer<TState> stateComparer)
-        {
-            if (stateComparer == null) throw new ArgumentNullException(nameof(stateComparer));
-
-            _stateComparer.SetEqualityComparer(stateComparer);
-        }
-
-        public void SetTriggerComparer(IEqualityComparer<TTrigger> triggerComparer)
-        {
-            if (triggerComparer == null) throw new ArgumentNullException(nameof(triggerComparer));
-
-            _triggerComparer.SetEqualityComparer(triggerComparer);
-        }
-
-        private void ProcessActions()
-        {
-            if (_processingActions)
-                return;
-
-            _processingActions = true;
-
-            while (_actionQueue.Count > 0)
-                _actionQueue.Dequeue().Invoke();
-
-            _processingActions = false;
-        }
-
-        public void AddChildTo(TState parentState, TState childState)
-        {
-            ValidateChildIsNotActive(parentState, childState);
-
-            ValidateParentIsNotActiveWithoutChilds(parentState, childState);
-
-            _stateHierarchy.AddChildTo(parentState, childState);
-        }
-
-        private void ValidateChildIsNotActive(TState parentState, TState childState)
-        {
-            if (IsInState(childState)) 
-                throw new UnableToAddChildException(this, parentState, childState, "Cannot set state " + childState +
-                                                                         " because it is in the active hierarchy path");
-        }
-
-        private void ValidateParentIsNotActiveWithoutChilds(TState parentState, TState childState)
-        {
-            if (IsInState(parentState))
-            {
-                if (_stateHierarchy.ChildCountOf(parentState) == 0)
-                {
-                    throw new UnableToAddChildException(this, parentState, childState, "Cannot set child " + childState +
-                                                      " to parent " + parentState +
-                                                      " because parent actually has no childs and is in the active hierarchy path." +
-                                                      " If a state has childs, at least one must be active");
-                }
-            }
+            _stateComparer = stateComparer ?? throw new ArgumentNullException(nameof(stateComparer));
+            _stateMachine = stateMachine;
+            _eventHandlers = new Dictionary<TState, List<IStateEventHandler>>(_stateComparer);
         }
 
         public void AddEventHandlerTo(TState stateId, IStateEventHandler eventHandler)
         {
-            ValidateContainsState(stateId);
+            ValidateIsNotNull(eventHandler);
+            ValidateCanAddEventHandler(stateId, eventHandler);
 
-            _eventHandlers.AddEventHandlerTo(stateId, eventHandler);
+            if (_eventHandlers.ContainsKey(stateId) == false)
+                _eventHandlers.Add(stateId, new List<IStateEventHandler>());
+
+            _eventHandlers[stateId].Add(eventHandler);
         }
 
-        public void AddGuardConditionTo(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
+        private void ValidateCanAddEventHandler(TState stateId, IStateEventHandler eventHandler)
         {
-            ValidateContainsTransition(transition);
-
-            _transitionValidator.AddGuardConditionTo(transition, guardCondition);
+            if (IsLocked(stateId))
+                throw new UnableToAddStateMachineElementException(_stateMachine, eventHandler);
         }
 
-        public void AddState(TState stateId, IState stateObject)
+        private void ValidateIsNotNull(IStateEventHandler eventHandler)
         {
-            _stateHierarchy.AddState(stateId, stateObject);
-        }
-
-        public void AddTransition(Transition<TState, TTrigger> transition)
-        {
-            ValidateContainsState(transition.SourceState);
-            ValidateContainsState(transition.TargetState);
-
-            _transitions.AddTransition(transition);
-        }
-
-        public bool AreImmediateParentAndChild(TState parentState, TState childState)
-        {
-            return _stateHierarchy.AreImmediateParentAndChild(parentState, childState);
-        }
-
-        public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
-        {
-            return _eventHandlers.ContainsEventHandlerOn(stateId, eventHandler);
-        }
-
-        public bool ContainsGuardConditionOn(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
-        {
-            return _transitionValidator.ContainsGuardConditionOn(transition, guardCondition);
-        }
-
-        public bool ContainsState(TState stateId)
-        {
-            if (stateId == null)
-                throw new ArgumentNullException(nameof(stateId));
-
-            return _stateHierarchy.ContainsState(stateId);
-        }
-
-        public bool ContainsTransition(Transition<TState, TTrigger> transition)
-        {
-            return _transitions.ContainsTransition(transition);
-        }
-
-        public HierarchyPath<TState> GetActiveHierarchyPath()
-        {
-            return _stateHierarchyBehaviourScheduler.GetActiveHierarchyPath();
-        }
-
-        public IStateEventHandler[] GetEventHandlersOf(TState stateId)
-        {
-            ValidateContainsState(stateId);
-
-            return _eventHandlers.GetEventHandlersOf(stateId);
-        }
-
-        public IGuardCondition[] GetGuardConditionsOf(Transition<TState, TTrigger> transition)
-        {
-            ValidateContainsTransition(transition);
-
-            return _transitionValidator.GetGuardConditionsOf(transition);
-        }
-
-        public TState[] GetImmediateChildsOf(TState parentId)
-        {
-            return _stateHierarchy.GetImmediateChildsOf(parentId);
-        }
-
-        public TState GetInitialStateOf(TState parentState)
-        {
-            return _stateHierarchy.GetInitialStateOf(parentState);
-        }
-
-        public TState GetParentOf(TState child)
-        {
-            return _stateHierarchy.GetParentOf(child);
-        }
-
-        public TState[] GetRoots()
-        {
-            return _stateHierarchy.GetRoots();
-        }
-
-        public IState GetStateObjectById(TState stateId)
-        {
-            return _stateHierarchy.GetStateObjectById(stateId);
-        }
-
-        public TState[] GetStates()
-        {
-            return _stateHierarchy.GetStates();
-        }
-
-        public Transition<TState, TTrigger>[] GetTransitions()
-        {
-            return _transitions.GetTransitions();
-        }
-
-        public bool IsInState(TState stateId)
-        {
-            return _stateHierarchyBehaviourScheduler.IsInState(stateId);
-        }
-
-        public bool RemoveChildFromParent(TState childState)
-        {
-            return _stateHierarchy.RemoveChildFromParent(childState);
+            if (eventHandler == null) throw new ArgumentNullException(nameof(eventHandler));
         }
 
         public bool RemoveEventHandlerFrom(TState stateId, IStateEventHandler eventHandler)
         {
-            return _eventHandlers.RemoveEventHandlerFrom(stateId, eventHandler);
-        }
+            ValidateCanRemoveEventHandler(stateId, eventHandler);
 
-        public bool RemoveGuardConditionFrom(Transition<TState, TTrigger> transition, IGuardCondition guardCondition)
-        {
-            return _transitionValidator.RemoveGuardConditionFrom(transition, guardCondition);
-        }
-
-        public bool RemoveState(TState stateId)
-        {
-            if (_stateHierarchy.RemoveState(stateId))
+            if (_eventHandlers.ContainsKey(stateId))
             {
-                RemoveObjectsRelatedTo(stateId);
+                bool removed = _eventHandlers[stateId].Remove(eventHandler);
 
-                return true;
+                if (_eventHandlers[stateId].Count == 0)
+                    _eventHandlers.Remove(stateId);
+
+                return removed;
             }
 
             return false;
         }
 
-        private void RemoveObjectsRelatedTo(TState stateId)
+        private void ValidateCanRemoveEventHandler(TState stateId, IStateEventHandler eventHandler)
         {
-            var removedTransitions = _transitions.RemoveTransitionsRelatedTo(stateId);
-            _transitionValidator.RemoveAllGuardConditionsFrom(removedTransitions);
-            _eventHandlers.RemoveEventHandlersFrom(stateId);
+            if (IsLocked(stateId))
+                throw new UnableToRemoveStateMachineElementException(_stateMachine, eventHandler);
         }
 
-        public bool RemoveTransition(Transition<TState, TTrigger> transition)
+        public void RemoveEventHandlersFrom(TState stateId)
         {
-            if (_transitions.RemoveTransition(transition))
-            {
-                _transitionValidator.RemoveAllGuardConditionsFrom(transition);
+            _eventHandlers.Remove(stateId);
+        }
 
-                return true;
-            }
+        public bool ContainsEventHandlerOn(TState stateId, IStateEventHandler eventHandler)
+        {
+            if (_eventHandlers.ContainsKey(stateId))
+                return _eventHandlers[stateId].Contains(eventHandler);
 
             return false;
         }
 
-        public void SendEvent(IEvent ev, Action<bool> callback = null)
+        public IStateEventHandler[] GetEventHandlersOf(TState stateId)
         {
-            _actionQueue.Enqueue(() =>
-            {
-                var handled = _eventDispatcher.SendEvent(ev);
-
-                callback?.Invoke(handled);
-            });
-
-            ProcessActions();
+            if (_eventHandlers.ContainsKey(stateId))
+                return _eventHandlers[stateId].ToArray();
+            else
+                return new IStateEventHandler[0];
         }
 
-        public void SetInitialState(TState stateId)
+        public void LockEventHandlersOf(TState stateId)
         {
-            _stateHierarchy.SetInitialState(stateId);
+            if (!IsLocked(stateId))
+                _lockedStates.Add(stateId);
         }
 
-        public void SetInitialStateOf(TState parentState, TState initialState)
+        public void UnlockEventHandlersOf(TState stateId)
         {
-            _stateHierarchy.SetInitialStateOf(parentState, initialState);
+            _lockedStates.Remove(stateId);
         }
 
-        public void Start(Action callback = null)
+        private bool IsLocked(TState stateId)
         {
-            _actionQueue.Enqueue(() =>
-            {
-                _stateHierarchyBehaviourScheduler.Start();
-
-                callback?.Invoke();
-            });
-
-            ProcessActions();
-        }
-
-        public void Stop(Action callback = null)
-        {
-            _actionQueue.Enqueue(() =>
-            {
-                _stateHierarchyBehaviourScheduler.Stop();
-
-                callback?.Invoke();
-            });
-
-            ProcessActions();
-        }
-
-        public void Trigger(TTrigger trigger, Action<bool> callback = null)
-        {
-            _actionQueue.Enqueue(() =>
-            {
-                var hasChanged = _stateHierarchyBehaviourScheduler.Trigger(trigger);
-                callback?.Invoke(hasChanged);
-            });
-
-            ProcessActions();
-        }
-
-        public void Update(Action callback = null)
-        {
-            _actionQueue.Enqueue(() =>
-            {
-                _stateHierarchyBehaviourScheduler.Update();
-                callback?.Invoke();
-            });
-
-            ProcessActions();
-        }
-
-        private void ValidateContainsState(TState stateId)
-        {
-            if (!ContainsState(stateId))
-                throw new StateIdNotAddedException(this, stateId);
-        }
-
-        private void ValidateContainsTransition(Transition<TState, TTrigger> transition)
-        {
-            if (!ContainsTransition(transition))
-                throw new TransitionNotAddedException(this, transition.SourceState, transition.Trigger, transition.TargetState);
-        }
-
-        private class StateEqualityComparer : IEqualityComparer<TState>
-        {
-            private IEqualityComparer<TState> _equalityComparer;
-
-            public StateEqualityComparer(IEqualityComparer<TState> equalityComparer)
-            {
-                SetEqualityComparer(equalityComparer);
-            }
-
-            public bool Equals(TState x, TState y)
-            {
-                return _equalityComparer.Equals(x, y);
-            }
-
-            public int GetHashCode(TState obj)
-            {
-                return _equalityComparer.GetHashCode(obj);
-            }
-
-            public void SetEqualityComparer(IEqualityComparer<TState> equalityComparer)
-            {
-                _equalityComparer = equalityComparer ?? EqualityComparer<TState>.Default;
-            }
-        }
-
-        private class TriggerEqualityComparer : IEqualityComparer<TTrigger>
-        {
-            private IEqualityComparer<TTrigger> _equalityComparer;
-
-            public TriggerEqualityComparer(IEqualityComparer<TTrigger> equalityComparer)
-            {
-                SetEqualityComparer(equalityComparer);
-            }
-
-            public bool Equals(TTrigger x, TTrigger y)
-            {
-                return _equalityComparer.Equals(x, y);
-            }
-
-            public int GetHashCode(TTrigger obj)
-            {
-                return _equalityComparer.GetHashCode(obj);
-            }
-
-            public void SetEqualityComparer(IEqualityComparer<TTrigger> equalityComparer)
-            {
-                _equalityComparer = equalityComparer ?? EqualityComparer<TTrigger>.Default;
-            }
+            return _lockedStates.Contains(stateId);
         }
     }
 
